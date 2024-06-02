@@ -40,7 +40,7 @@ OPTIONS (description = 'Nameless Analytics | Main table')
 ```
 
 ## Query examples
-Here some query examples for make user, session, pages, transactions and products reports. 
+Here some query examples for make [user](https://github.com/tommasomoretti/nameless-analytics-reporting-queries?tab=readme-ov-file#users), [session](https://github.com/tommasomoretti/nameless-analytics-reporting-queries?tab=readme-ov-file#sessions), [pages](https://github.com/tommasomoretti/nameless-analytics-reporting-queries?tab=readme-ov-file#pages), [transactions](https://github.com/tommasomoretti/nameless-analytics-reporting-queries?tab=readme-ov-file#ecommerce-transactions) and [products](https://github.com/tommasomoretti/nameless-analytics-reporting-queries?tab=readme-ov-file#ecommerce-products) reports. 
 
 ### Users
 
