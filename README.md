@@ -1,4 +1,4 @@
-# nameless-analytics-reporting-queries
+<# nameless-analytics-reporting-queries
 
 ## The main table
 
@@ -260,7 +260,7 @@ from user_data
 group by all
 ```
 
-## Sessions
+### Sessions
 ``` sql
 with session_data_raw as ( 
   select
@@ -443,7 +443,7 @@ select
 from session_data
 ```
 
-## Pages
+### Pages
 ```sql
 with page_data_raw as ( 
   select
@@ -541,7 +541,7 @@ from page_data_def
 group by all
 ```
 
-## Ecommerce: Transactions
+### Ecommerce: Transactions
 ```sql
 with ecommerce_data_raw as ( 
   select
@@ -791,7 +791,7 @@ from ecommerce_data
 ```
 
 
-## Ecommerce: Products
+### Ecommerce: Products
 ```sql
 with ecommerce_data_raw as ( 
   select
@@ -952,6 +952,6 @@ select
 from ecommerce_data
 ```
 
-## Ecommerce: user behaviour funnel
+### Ecommerce: user behaviour funnel
 
 
