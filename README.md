@@ -1,4 +1,4 @@
-<# nameless-analytics-reporting-queries
+# Nameless Analytics: Reporting queries
 
 ## The main table
 
