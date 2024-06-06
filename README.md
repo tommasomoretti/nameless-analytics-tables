@@ -2,14 +2,13 @@
 
 ## The main table
 
-This is the schema of the main table. 
+This is the schema of the Google BigQuery main table; you have to create it manually before starting to stream events.
 
 <img width="1412" alt="Screenshot 2024-06-02 alle 20 03 35" src="https://github.com/tommasomoretti/nameless-analytics-reporting-queries/assets/29273232/6c803b6b-cfdc-4573-8782-b8f14abec92f">
 
-The tags does not create any table in Google Big Query so you have to create it manually. 
 
 ``` sql
-CREATE TABLE IF NOT EXISTS tom-moretti.nameless_analytics.hits (
+CREATE TABLE IF NOT EXISTS `project_id.dataset_id.table_id` (
   event_date DATE OPTIONS (description = 'The date of the request'),
   client_id STRING OPTIONS (description = 'The client id of the user'),
   session_id STRING OPTIONS (description = 'The session id of the user'),
