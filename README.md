@@ -10,11 +10,11 @@ Run this query to create the table.
 
 ``` sql
 CREATE TABLE IF NOT EXISTS `project_id.dataset_id.table_id` (
-  event_date DATE OPTIONS (description = 'The date of the request'),
-  client_id STRING OPTIONS (description = 'The client id of the user'),
-  session_id STRING OPTIONS (description = 'The session id of the user'),
-  event_name STRING OPTIONS (description = 'The event name of the request'),
-  event_timestamp INT64 OPTIONS (description = 'The insert timestamp of the inserted request in BigQuery'),
+  event_date DATE OPTIONS (description = 'Date of the request'),
+  client_id STRING OPTIONS (description = 'Client id of the user'),
+  session_id STRING OPTIONS (description = 'Session id of the user'),
+  event_name STRING OPTIONS (description = 'Event name of the request'),
+  event_timestamp INT64 OPTIONS (description = 'Insert timestamp of the event'),
   event_data ARRAY <
     STRUCT < 
       name STRING OPTIONS (description = 'Event data parameter name'),
@@ -35,7 +35,7 @@ CREATE TABLE IF NOT EXISTS `project_id.dataset_id.table_id` (
 ) 
 
 PARTITION BY event_date
-CLUSTER BY client_id, session_id 
+CLUSTER BY client_id, session_id, event_name
 OPTIONS (description = 'Nameless Analytics | Main table')
 ```
 
