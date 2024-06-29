@@ -6,6 +6,8 @@ This is the schema of the Google BigQuery main table. You have to create it manu
 
 <img width="1412" alt="Screenshot 2024-06-02 alle 20 03 35" src="https://github.com/tommasomoretti/nameless-analytics-reporting-queries/assets/29273232/6c803b6b-cfdc-4573-8782-b8f14abec92f">
 
+<img width="1412" alt="Screenshot 2024-06-29 alle 21 45 21" src="https://github.com/tommasomoretti/nameless-analytics-reporting-queries/assets/29273232/01e7da5f-dc22-44dd-ac60-4ad3102fa5ba">
+
 Run this query to create the table.
 
 ``` sql
