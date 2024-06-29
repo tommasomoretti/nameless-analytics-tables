@@ -43,9 +43,9 @@ OPTIONS (description = 'Nameless Analytics | Main table')
 
 ## Query examples
 Here some query examples for make tables for:
-- [user](https://github.com/tommasomoretti/nameless-analytics-reporting-queries?tab=readme-ov-file#users),
-- [session](https://github.com/tommasomoretti/nameless-analytics-reporting-queries?tab=readme-ov-file#sessions),
-- [pages](https://github.com/tommasomoretti/nameless-analytics-reporting-queries?tab=readme-ov-file#pages),
+- [user](https://github.com/tommasomoretti/nameless-analytics-reporting-queries?tab=readme-ov-file#users)
+- [session](https://github.com/tommasomoretti/nameless-analytics-reporting-queries?tab=readme-ov-file#sessions)
+- [pages](https://github.com/tommasomoretti/nameless-analytics-reporting-queries?tab=readme-ov-file#pages)
 - [transactions](https://github.com/tommasomoretti/nameless-analytics-reporting-queries?tab=readme-ov-file#ecommerce-transactions)
 - [products](https://github.com/tommasomoretti/nameless-analytics-reporting-queries?tab=readme-ov-file#ecommerce-products) 
 
@@ -53,7 +53,7 @@ Here some query examples for make tables for:
 
 ``` sql
 with user_data_raw as ( 
-  select
+  select   
     -- USER DATA
     client_id,
     --- (select value.string from unnest (user_data) where name = 'user_id') as user_id,
@@ -83,7 +83,10 @@ user_data_product_def as (
     client_id,
     -- user_id,
     user_channel_grouping,
-    ifnull(NET.REG_DOMAIN(user_source), 'direct') as user_source,
+    case
+      when net.reg_domain(user_source) is not null then net.reg_domain(user_source)
+      else user_source
+    end as user_source,
     user_campaign,
     timestamp_millis(min_user_timestamp) as min_user_timestamp,
     timestamp_millis(max_user_timestamp) as max_user_timestamp,
@@ -122,7 +125,6 @@ user_data_product_def as (
  
 user_data_session_def as (
   select 
-    date(min_session_timestamp) as user_acquisition_date,
     client_id,
     -- user_id,
     user_channel_grouping,
@@ -148,7 +150,6 @@ user_data_session_def as (
 
 user_data_def as(
   select 
-    user_acquisition_date,
     client_id,
     -- user_id,
     case 
@@ -159,21 +160,13 @@ user_data_def as(
       when session_number > 1 then client_id
       else null
     end as returning_user,
-    
-    -- case 
-    --   when purchase = 0 then client_id
-    --   else null
-    -- end as not_a_customer,
-    -- case 
-    --   when purchase >= 1 then client_id
-    --   else null
-    -- end as customer,
-
     user_channel_grouping,
     user_source,
     user_campaign,
-    date_diff(DATE(max_user_timestamp), DATE(min_user_timestamp), day) + 1 as days_since_first_visit,
-    count(session_id) as sessions,
+    min_user_timestamp,
+    max_user_timestamp,
+    date_diff(CURRENT_DATE(), DATE(min_user_timestamp), day) as days_since_first_visit,
+    date_diff(CURRENT_DATE(), date(max_user_timestamp), day) as days_from_last_visit,
     session_id,
     session_number,
     case 
@@ -196,28 +189,41 @@ user_data_def as(
   group by all
 ),
 
-user_data as (
+def as (
   select 
-    user_acquisition_date,
     client_id,
     user_channel_grouping,
     user_source,
     user_campaign,
     new_user,
-    returning_user,
     max(new_user) over (partition by client_id) as new_user_id,
+    returning_user,
     max(returning_user) over (partition by client_id) as returning_user_id,
-    -- not_a_customer,
-    -- customer,
-    -- max(customer) over (partition by client_id) as customer_id,
-    -- max(not_a_customer) over (partition by client_id) as not_customer_id,
-    -- case 
-    --   when sum(purchase) >= 1 then 'Customer'
-    --   else 'Not a customer'
-    -- end as customer_type,
+    case 
+      when sum(purchase) = 1 then 'New customer'
+      when sum(purchase) > 1 then 'Returning customer'
+      else 'Not a customer'
+    end as customer_type,
+    case 
+      when sum(purchase) >= 1 then 1
+      else null
+    end as customer,
+    case 
+      when sum(purchase) = 0 then 1
+      else null
+    end as not_a_customer,
+    min_user_timestamp,
+    max(min_user_timestamp) over (partition by client_id) as max_min_user_timestamp,
+    max_user_timestamp,
+    max(max_user_timestamp) over (partition by client_id) as max_max_user_timestamp,
+
     days_since_first_visit,
     max(days_since_first_visit) over (partition by client_id) as max_days_since_first_visit,
-    sum(sessions) as sessions,
+
+    days_from_last_visit,
+    max(days_from_last_visit) over (partition by client_id) as max_days_from_last_visit,
+    count(distinct session_id) as sessions,
+    sum(purchase) / count(distinct session_id) as session_conversion_rate,
     sum(page_view) as page_view,
     sum(purchase) as purchase,
     sum(refund) as refund,
@@ -230,31 +236,21 @@ user_data as (
   group by all
 )
 
-select  
-  user_acquisition_date,
+select 
   client_id,
-  new_user_id,
-  returning_user_id,
-  -- not_customer_id,
-  -- customer_id,
-  case 
-    when sum(purchase) >= 1 then 'Customer'
-    else 'Not a customer'
-  end as customer_type,
-  case 
-    when sum(purchase) >= 1 then 1
-    else 0
-  end as customer,
-  case 
-    when sum(purchase) >= 1 then 1
-    else 0
-  end as not_a_customer,
   user_channel_grouping,
   user_source,
   user_campaign,
+  max(new_user_id) as new_user_id,
+  max(returning_user_id) as returning_user_id,
+  max(customer) as customer,
+  max(not_a_customer) as not_a_customer,
+  min_user_timestamp,
+  max_user_timestamp,
   max_days_since_first_visit,
+  max_days_from_last_visit,
   sum(sessions) as sessions,
-  sum(purchase) / sum(sessions) as conversion_rate,
+  avg(session_conversion_rate) as session_conversion_rate,
   sum(page_view) as page_view,
   sum(purchase) as purchase,
   sum(refund) as refund,
@@ -262,8 +258,8 @@ select
   sum(item_quantity_refunded) as item_quantity_refunded,
   sum(purchase_revenue) as purchase_revenue,
   sum(refund_revenue) as refund_revenue,
-  sum(total_revenue_net_refund) as revenue_net_refund
-from user_data
+  sum(total_revenue_net_refund) as total_revenue_net_refund
+from def
 group by all
 ```
 
@@ -283,6 +279,7 @@ with session_data_raw as (
     first_value((select value.string from unnest (event_data) where name = 'source')) over (partition by session_id order by event_timestamp) as session_source,
     first_value((select value.string from unnest (event_data) where name = 'campaign')) over (partition by session_id order by event_timestamp) as session_campaign,
     first_value((select value.string from unnest (event_data) where name = 'page_location')) over (partition by session_id order by event_timestamp) as session_landing_page_location,
+    first_value((select value.string from unnest (event_data) where name = 'page_hostname')) over (partition by session_id order by event_timestamp) as session_hostname,
     first_value((select value.string from unnest (event_data) where name = 'device_type')) over (partition by session_id order by event_timestamp) as session_device_type,
     first_value((select value.string from unnest (event_data) where name = 'country')) over (partition by session_id order by event_timestamp) as session_country,
     first_value((select value.string from unnest (event_data) where name = 'browser_name')) over (partition by session_id order by event_timestamp) as session_browser_name,
@@ -308,9 +305,13 @@ session_data_def as (
     min_session_timestamp,
     max_session_timestamp,
     session_channel_grouping,
-    ifnull(NET.REG_DOMAIN(session_source), 'direct') as session_source,
+    case
+      when net.reg_domain(session_source) is not null then net.reg_domain(session_source)
+      else session_source
+    end as session_source,
     session_campaign,
     session_landing_page_location,
+    session_hostname,
     session_device_type,
     session_country,
     session_browser_name,
@@ -372,6 +373,7 @@ session_data as (
     session_browser_name,
     session_browser_language,
     session_landing_page_location,
+    session_hostname,
     (max_session_timestamp - min_session_timestamp) / 1000 as session_duration_sec,
     countif(event_name = 'page_view') as page_view,
     countif(event_name = 'click_contact_button') as click_contact_button, 
@@ -423,6 +425,7 @@ select
   session_browser_name,
   session_browser_language,
   session_landing_page_location,
+  session_hostname,
   session_duration_sec,
   page_view,
   click_contact_button, 
@@ -466,6 +469,7 @@ with page_data_raw as (
     first_value((select value.string from unnest (event_data) where name = 'source')) over (partition by session_id order by event_timestamp) as session_source,
     first_value((select value.string from unnest (event_data) where name = 'campaign')) over (partition by session_id order by event_timestamp) as session_campaign,
     first_value((select value.string from unnest (event_data) where name = 'page_location')) over (partition by session_id order by event_timestamp) as session_landing_page_location,
+    first_value((select value.string from unnest (event_data) where name = 'page_hostname')) over (partition by session_id order by event_timestamp) as session_hostname,
     first_value((select value.string from unnest (event_data) where name = 'device_type')) over (partition by session_id order by event_timestamp) as session_device_type,
     first_value((select value.string from unnest (event_data) where name = 'country')) over (partition by session_id order by event_timestamp) as session_country,
     first_value((select value.string from unnest (event_data) where name = 'browser_name')) over (partition by session_id order by event_timestamp) as session_browser_name,
@@ -479,6 +483,7 @@ with page_data_raw as (
     first_value(event_timestamp) over (partition by (select value.string from unnest (event_data) where name = 'page_id') order by event_timestamp desc) as max_page_timestamp,
     (select value.string from unnest (event_data) where name = 'page_id') as page_id,
     (select value.string from unnest (event_data) where name = 'page_location') as page_location,
+    (select value.string from unnest (event_data) where name = 'page_hostname') as page_hostname,
     (select value.string from unnest (event_data) where name = 'page_title') as page_title,
     (select value.string from unnest (event_data) where name = 'content_group') as content_group,
   from `tom-moretti.nameless_analytics.hits` 
@@ -493,9 +498,13 @@ page_data_def as(
     session_id,
     min_session_timestamp,
     session_channel_grouping,
-    ifnull(NET.REG_DOMAIN(session_source), 'direct') as session_source,
+    case
+      when net.reg_domain(session_source) is not null then net.reg_domain(session_source)
+      else session_source
+    end as session_source,
     session_campaign,
     session_landing_page_location,
+    session_hostname,
     session_device_type,
     session_country,
     session_browser_name,
@@ -504,6 +513,7 @@ page_data_def as(
     event_timestamp,
     page_id,
     page_location,
+    page_hostname,
     page_title,
     content_group,
     min_page_timestamp,
@@ -538,8 +548,10 @@ select
   session_browser_name,
   session_browser_language,
   session_landing_page_location,
+  session_hostname,
   page_id,
   page_location,
+  page_hostname,
   page_title,
   content_group,
   (max_page_timestamp - min_page_timestamp) / 1000 as time_on_page_sec,
@@ -549,6 +561,171 @@ group by all
 ```
 
 ### Ecommerce: Transactions
+```sql
+with ecommerce_data_raw as ( 
+  select
+    -- USER DATA
+    client_id,
+    --- (select value.string from unnest (user_data) where name = 'user_id') as user_id,
+
+    -- SESSION DATA
+    session_id, 
+    first_value(event_timestamp) over (partition by session_id order by event_timestamp asc) as min_session_timestamp,
+    first_value((select value.string from unnest (event_data) where name = 'channel_grouping')) over (partition by session_id order by event_timestamp) as session_channel_grouping,
+    first_value((select value.string from unnest (event_data) where name = 'source')) over (partition by session_id order by event_timestamp) as session_source,
+    first_value((select value.string from unnest (event_data) where name = 'campaign')) over (partition by session_id order by event_timestamp) as session_campaign,
+    first_value((select value.string from unnest (event_data) where name = 'page_location')) over (partition by session_id order by event_timestamp) as session_landing_page_location,
+    first_value((select value.string from unnest (event_data) where name = 'device_type')) over (partition by session_id order by event_timestamp) as session_device_type,
+    first_value((select value.string from unnest (event_data) where name = 'country')) over (partition by session_id order by event_timestamp) as session_country,
+    first_value((select value.string from unnest (event_data) where name = 'browser_name')) over (partition by session_id order by event_timestamp) as session_browser_name,
+    first_value((select value.string from unnest (event_data) where name = 'browser_language')) over (partition by session_id order by event_timestamp) as session_browser_language,
+
+    -- EVENT DATA
+    event_name,
+    event_date,
+    event_timestamp,
+
+    -- ECOMMERCE DATA
+    (select value.json from unnest(event_data) where name = 'ecommerce') as transaction_data,
+  from `tom-moretti.nameless_analytics.hits`
+),
+
+ecommerce_data_def as (
+  select 
+    event_date,
+    client_id, 
+    -- user_id,
+    dense_rank() over (partition by client_id order by min_session_timestamp asc) as session_number,
+    session_id,
+    min_session_timestamp,
+    session_channel_grouping,
+    case
+      when net.reg_domain(session_source) is not null then net.reg_domain(session_source)
+      else session_source
+    end as session_source,
+    session_campaign,
+    session_landing_page_location,
+    session_device_type,
+    session_country,
+    session_browser_name,
+    session_browser_language,
+    event_name,
+    event_timestamp,
+    json_value(transaction_data.transaction_id) as transaction_id,
+    json_value(transaction_data.currency) as transaction_currency,
+    json_value(transaction_data.coupon) as transaction_coupon,
+    case
+      when event_name = 'purchase' then ifnull(cast(json_value(transaction_data.value) as float64), 0.0)
+      else 0.0
+    end as purchase_revenue,
+    case
+      when event_name = 'purchase' then ifnull(cast(json_value(transaction_data.shipping) as float64), 0.0)
+      else 0.0
+    end as purchase_shipping,
+    case
+      when event_name = 'purchase' then ifnull(cast(json_value(transaction_data.tax) as float64), 0.0)
+      else 0.0
+    end as purchase_tax,
+    case
+      when event_name = 'refund' then -ifnull(cast(json_value(transaction_data.value) as float64), 0.0)
+      else 0.0
+    end as refund_revenue,
+    case
+      when event_name = 'refund' then -ifnull(cast(json_value(transaction_data.shipping) as float64), 0.0)
+      else 0.0
+    end as refund_shipping,
+    case
+      when event_name = 'refund' then -ifnull(cast(json_value(transaction_data.tax) as float64), 0.0)
+      else 0.0
+    end as refund_tax,
+  from ecommerce_data_raw
+),
+
+ecommerce_data as (
+  select 
+    event_date,
+    client_id, 
+    -- user_id,
+    case 
+      when session_number = 1 then 'new_user'
+      when session_number > 1 then 'returning_user'
+    end as user_type,
+    case 
+      when session_number = 1 then client_id
+      else null
+    end as new_user,
+    case 
+      when session_number > 1 then client_id
+      else null
+    end as returning_user,
+    session_number,
+    session_id,
+    min_session_timestamp,
+    session_channel_grouping,
+    session_source,
+    session_campaign,
+    session_landing_page_location,
+    session_device_type,
+    session_country,
+    session_browser_name,
+    session_browser_language,
+    event_timestamp,
+    event_name,
+    countif(event_name = 'purchase') as purchase,
+    countif(event_name = 'refund') as refund,
+    transaction_id,
+    transaction_currency,
+    transaction_coupon,
+    sum(purchase_revenue) as purchase_revenue,
+    sum(purchase_shipping) as purchase_shipping,
+    sum(purchase_tax) as purchase_tax,
+    sum(refund_revenue) as refund_revenue,
+    sum(refund_shipping) as refund_shipping,
+    sum(refund_tax) as refund_tax,
+  from ecommerce_data_def
+  where true
+    and regexp_contains(event_name, 'purchase|refund')
+  group by all
+)
+
+select 
+  event_date,
+  client_id,
+  -- user_id,
+  user_type,
+  new_user,
+  returning_user,
+  session_number,
+  session_id,
+  min_session_timestamp,
+  session_channel_grouping,
+  session_source,
+  session_campaign,
+  session_landing_page_location,
+  session_device_type,
+  session_country,
+  session_browser_name,
+  session_browser_language,
+  purchase,
+  refund,
+  transaction_id, 
+  transaction_currency,
+  transaction_coupon,
+  purchase_revenue,
+  purchase_shipping,
+  purchase_tax,
+  refund_revenue,
+  refund_shipping,
+  refund_tax,
+  purchase - refund as purchase_net_refund,
+  purchase_revenue + refund_revenue as revenue_net_refund,
+  purchase_shipping + refund_shipping as shipping_net_refund,
+  purchase_tax + refund_tax as tax_net_refund,
+from ecommerce_data
+```
+
+
+### Ecommerce: Products
 ```sql
 with ecommerce_data_raw as ( 
   select
@@ -588,7 +765,10 @@ ecommerce_data_def as (
     session_id,
     min_session_timestamp,
     session_channel_grouping,
-    ifnull(NET.REG_DOMAIN(session_source), 'direct') as session_source,
+    case
+      when net.reg_domain(session_source) is not null then net.reg_domain(session_source)
+      else session_source
+    end as session_source,
     session_campaign,
     session_landing_page_location,
     session_device_type,
@@ -798,9 +978,10 @@ from ecommerce_data
 ```
 
 
-### Ecommerce: Products
+### Ecommerce: shopping stages - Closed funnel
+
 ```sql
-with ecommerce_data_raw as ( 
+with shopping_stage_data_raw as ( 
   select
     -- USER DATA
     client_id,
@@ -821,144 +1002,528 @@ with ecommerce_data_raw as (
     -- EVENT DATA
     event_name,
     event_date,
-    event_timestamp,
+    -- event_timestamp,
 
     -- ECOMMERCE DATA
-    (select value.json from unnest(event_data) where name = 'ecommerce') as transaction_data,
+    -- (select value.json from unnest(event_data) where name = 'ecommerce') as transaction_data,
   from `tom-moretti.nameless_analytics.hits`
 ),
 
-ecommerce_data_def as (
+all_sessions as (
   select 
     event_date,
-    client_id, 
-    -- user_id,
-    dense_rank() over (partition by client_id order by min_session_timestamp asc) as session_number,
+    client_id,
     session_id,
-    min_session_timestamp,
     session_channel_grouping,
-    ifnull(NET.REG_DOMAIN(session_source), 'direct') as session_source,
+    case
+      when net.reg_domain(session_source) is not null then net.reg_domain(session_source)
+      else session_source
+    end as session_source,
     session_campaign,
-    session_landing_page_location,
     session_device_type,
     session_country,
-    session_browser_name,
     session_browser_language,
-    event_name,
-    event_timestamp,
-    json_value(transaction_data.transaction_id) as transaction_id,
-    json_value(transaction_data.currency) as transaction_currency,
-    json_value(transaction_data.coupon) as transaction_coupon,
-    case
-      when event_name = 'purchase' then ifnull(cast(json_value(transaction_data.value) as float64), 0.0)
-      else 0.0
-    end as purchase_revenue,
-    case
-      when event_name = 'purchase' then ifnull(cast(json_value(transaction_data.shipping) as float64), 0.0)
-      else 0.0
-    end as purchase_shipping,
-    case
-      when event_name = 'purchase' then ifnull(cast(json_value(transaction_data.tax) as float64), 0.0)
-      else 0.0
-    end as purchase_tax,
-    case
-      when event_name = 'refund' then -ifnull(cast(json_value(transaction_data.value) as float64), 0.0)
-      else 0.0
-    end as refund_revenue,
-    case
-      when event_name = 'refund' then -ifnull(cast(json_value(transaction_data.shipping) as float64), 0.0)
-      else 0.0
-    end as refund_shipping,
-    case
-      when event_name = 'refund' then -ifnull(cast(json_value(transaction_data.tax) as float64), 0.0)
-      else 0.0
-    end as refund_tax,
-  from ecommerce_data_raw
+  from shopping_stage_data_raw
+  group by all
 ),
 
-ecommerce_data as (
+view_item as (
   select 
     event_date,
-    client_id, 
-    -- user_id,
-    case 
-      when session_number = 1 then 'new_user'
-      when session_number > 1 then 'returning_user'
-    end as user_type,
-    case 
-      when session_number = 1 then client_id
-      else null
-    end as new_user,
-    case 
-      when session_number > 1 then client_id
-      else null
-    end as returning_user,
-    session_number,
+    client_id,
     session_id,
-    min_session_timestamp,
     session_channel_grouping,
-    session_source,
+    case
+      when net.reg_domain(session_source) is not null then net.reg_domain(session_source)
+      else session_source
+    end as session_source,
     session_campaign,
-    session_landing_page_location,
     session_device_type,
     session_country,
-    session_browser_name,
     session_browser_language,
-    event_timestamp,
-    event_name,
-    countif(event_name = 'purchase') as purchase,
-    countif(event_name = 'refund') as refund,
-    transaction_id,
-    transaction_currency,
-    transaction_coupon,
-    sum(purchase_revenue) as purchase_revenue,
-    sum(purchase_shipping) as purchase_shipping,
-    sum(purchase_tax) as purchase_tax,
-    sum(refund_revenue) as refund_revenue,
-    sum(refund_shipping) as refund_shipping,
-    sum(refund_tax) as refund_tax,
-  from ecommerce_data_def
-  where true
-    and regexp_contains(event_name, 'purchase|refund')
+  from shopping_stage_data_raw
+  where event_name = 'view_item'
   group by all
+),
+
+add_to_cart as (
+  select 
+    event_date,
+    client_id,
+    session_id,
+    session_channel_grouping,
+    case
+      when net.reg_domain(session_source) is not null then net.reg_domain(session_source)
+      else session_source
+    end as session_source,
+    session_campaign,
+    session_device_type,
+    session_country,
+    session_browser_language,
+  from shopping_stage_data_raw
+  where event_name = 'add_to_cart'
+  group by all
+),
+
+begin_checkout as (
+  select 
+    event_date,
+    client_id,
+    session_id,
+    session_channel_grouping,
+    case
+      when net.reg_domain(session_source) is not null then net.reg_domain(session_source)
+      else session_source
+    end as session_source,
+    session_campaign,
+    session_device_type,
+    session_country,
+    session_browser_language,
+  from shopping_stage_data_raw
+  where event_name = 'begin_checkout'
+  group by all
+),
+
+add_payment_info as (
+  select 
+    event_date,
+    client_id,
+    session_id,
+    session_channel_grouping,
+    case
+      when net.reg_domain(session_source) is not null then net.reg_domain(session_source)
+      else session_source
+    end as session_source,
+    session_campaign,
+    session_device_type,
+    session_country,
+    session_browser_language,
+  from shopping_stage_data_raw
+  where event_name = 'add_payment_info'
+  group by all
+),
+
+add_shipping_info as (
+  select 
+    event_date,
+    client_id,
+    session_id,
+    session_channel_grouping,
+    case
+      when net.reg_domain(session_source) is not null then net.reg_domain(session_source)
+      else session_source
+    end as session_source,
+    session_campaign,
+    session_device_type,
+    session_country,
+    session_browser_language,
+  from shopping_stage_data_raw
+  where event_name = 'add_shipping_info'
+  group by all
+),
+
+purchase as (
+  select 
+    event_date,
+    client_id,
+    session_id,
+    session_channel_grouping,
+    case
+      when net.reg_domain(session_source) is not null then net.reg_domain(session_source)
+      else session_source
+    end as session_source,
+    session_campaign,
+    session_device_type,
+    session_country,
+    session_browser_language,
+  from shopping_stage_data_raw
+  where event_name = 'purchase'
+  group by all
+),
+
+join_steps as (
+  select 
+    all_sessions.event_date,
+    all_sessions.client_id,
+    all_sessions.session_id,
+    all_sessions.session_channel_grouping,
+    all_sessions.session_source,
+    all_sessions.session_campaign,
+    all_sessions.session_device_type,
+    all_sessions.session_country,
+    all_sessions.session_browser_language,
+
+    all_sessions.client_id as all_sessions_users,
+    view_item.client_id as view_item_users,
+    add_to_cart.client_id as add_to_cart_users,
+    begin_checkout.client_id as begin_checkout_users,
+    add_shipping_info.client_id as add_shipping_info_users,
+    add_payment_info.client_id as add_payment_info_users,
+    purchase.client_id as purchase_users,
+
+    all_sessions.session_id as all_sessions_sessions,
+    view_item.session_id as view_item_sessions,
+    add_to_cart.session_id as add_to_cart_sessions,
+    begin_checkout.session_id as begin_checkout_sessions,
+    add_shipping_info.session_id as add_shipping_info_sessions,
+    add_payment_info.session_id as add_payment_info_sessions,
+    purchase.session_id as purchase_sessions
+
+  from all_sessions
+    left join view_item
+      on all_sessions.session_id = view_item.session_id
+    left join add_to_cart
+      on view_item.session_id = add_to_cart.session_id
+    left join begin_checkout
+      on add_to_cart.session_id = begin_checkout.session_id
+    left join add_shipping_info
+      on begin_checkout.session_id = add_shipping_info.session_id
+    left join add_payment_info
+      on add_shipping_info.session_id = add_payment_info.session_id
+    left join purchase
+      on add_payment_info.session_id = purchase.session_id
+),
+
+steps_pivot as (
+  select 
+    *
+  from join_steps
+    unpivot((client_id, session_id) for step_name in (
+      (all_sessions_users, all_sessions_sessions) as "0 - All sessions",
+      (view_item_users, view_item_sessions) as "1 - View item",
+      (add_to_cart_users, add_to_cart_sessions) as "2 - Add to cart",
+      (begin_checkout_users, begin_checkout_sessions) as "3 - Begin checkout",
+      (add_shipping_info_users, add_shipping_info_sessions) as "4 - Add shipping info",
+      (add_payment_info_users, add_payment_info_sessions) as "5 - Add payment info",
+      (purchase_users, purchase_sessions) as "6 - Purchase"
+    ))
 )
 
-select 
+select
   event_date,
   client_id,
-  -- user_id,
-  user_type,
-  new_user,
-  returning_user,
-  session_number,
   session_id,
-  min_session_timestamp,
   session_channel_grouping,
   session_source,
   session_campaign,
-  session_landing_page_location,
   session_device_type,
   session_country,
-  session_browser_name,
   session_browser_language,
-  purchase,
-  refund,
-  transaction_id, 
-  transaction_currency,
-  transaction_coupon,
-  purchase_revenue,
-  purchase_shipping,
-  purchase_tax,
-  refund_revenue,
-  refund_shipping,
-  refund_tax,
-  purchase - refund as purchase_net_refund,
-  purchase_revenue + refund_revenue as revenue_net_refund,
-  purchase_shipping + refund_shipping as shipping_net_refund,
-  purchase_tax + refund_tax as tax_net_refund,
-from ecommerce_data
+  step_name,
+  lead(client_id, 1) over (
+    partition by client_id, session_id, session_device_type, session_country, session_browser_language, session_channel_grouping, session_source, session_campaign
+    order by event_date, client_id, session_id, session_device_type, session_country, session_browser_language, session_channel_grouping, session_source, session_campaign, step_name
+  ) as client_id_next_step,
+  lead(session_id, 1) over (
+    partition by client_id, session_id, session_device_type, session_country, session_browser_language, session_channel_grouping, session_source, session_campaign
+    order by event_date, client_id, session_id, session_device_type, session_country, session_browser_language, session_channel_grouping, session_source, session_campaign, step_name
+  ) as session_id_next_step
+from steps_pivot
+where true
+group by all
 ```
 
-### Ecommerce: user behaviour funnel
 
+### Ecommerce: shopping stages - Open funnel
 
+```sql
+with shopping_stage_data_raw as ( 
+  select
+    -- USER DATA
+    client_id,
+    --- (select value.string from unnest (user_data) where name = 'user_id') as user_id,
+
+    -- SESSION DATA
+    session_id, 
+    first_value(event_timestamp) over (partition by session_id order by event_timestamp asc) as min_session_timestamp,
+    first_value((select value.string from unnest (event_data) where name = 'channel_grouping')) over (partition by session_id order by event_timestamp) as session_channel_grouping,
+    first_value((select value.string from unnest (event_data) where name = 'source')) over (partition by session_id order by event_timestamp) as session_source,
+    first_value((select value.string from unnest (event_data) where name = 'campaign')) over (partition by session_id order by event_timestamp) as session_campaign,
+    first_value((select value.string from unnest (event_data) where name = 'page_location')) over (partition by session_id order by event_timestamp) as session_landing_page_location,
+    first_value((select value.string from unnest (event_data) where name = 'device_type')) over (partition by session_id order by event_timestamp) as session_device_type,
+    first_value((select value.string from unnest (event_data) where name = 'country')) over (partition by session_id order by event_timestamp) as session_country,
+    first_value((select value.string from unnest (event_data) where name = 'browser_name')) over (partition by session_id order by event_timestamp) as session_browser_name,
+    first_value((select value.string from unnest (event_data) where name = 'browser_language')) over (partition by session_id order by event_timestamp) as session_browser_language,
+
+    -- EVENT DATA
+    event_name,
+    event_date,
+    -- event_timestamp,
+
+    -- ECOMMERCE DATA
+    -- (select value.json from unnest(event_data) where name = 'ecommerce') as transaction_data,
+  from `tom-moretti.nameless_analytics.hits`
+),
+
+all_sessions as (
+  select 
+    event_date,
+    client_id,
+    session_id,
+    session_channel_grouping,
+    case
+      when net.reg_domain(session_source) is not null then net.reg_domain(session_source)
+      else session_source
+    end as session_source,
+    session_campaign,
+    session_device_type,
+    session_country,
+    session_browser_language,
+  from shopping_stage_data_raw
+  group by all
+),
+
+view_item as (
+  select 
+    event_date,
+    client_id,
+    session_id,
+    session_channel_grouping,
+    case
+      when net.reg_domain(session_source) is not null then net.reg_domain(session_source)
+      else session_source
+    end as session_source,
+    session_campaign,
+    session_device_type,
+    session_country,
+    session_browser_language,
+  from shopping_stage_data_raw
+  where event_name = 'view_item'
+  group by all
+),
+
+add_to_cart as (
+  select 
+    event_date,
+    client_id,
+    session_id,
+    session_channel_grouping,
+    case
+      when net.reg_domain(session_source) is not null then net.reg_domain(session_source)
+      else session_source
+    end as session_source,
+    session_campaign,
+    session_device_type,
+    session_country,
+    session_browser_language,
+  from shopping_stage_data_raw
+  where event_name = 'add_to_cart'
+  group by all
+),
+
+begin_checkout as (
+  select 
+    event_date,
+    client_id,
+    session_id,
+    session_channel_grouping,
+    case
+      when net.reg_domain(session_source) is not null then net.reg_domain(session_source)
+      else session_source
+    end as session_source,
+    session_campaign,
+    session_device_type,
+    session_country,
+    session_browser_language,
+  from shopping_stage_data_raw
+  where event_name = 'begin_checkout'
+  group by all
+),
+
+add_payment_info as (
+  select 
+    event_date,
+    client_id,
+    session_id,
+    session_channel_grouping,
+    case
+      when net.reg_domain(session_source) is not null then net.reg_domain(session_source)
+      else session_source
+    end as session_source,
+    session_campaign,
+    session_device_type,
+    session_country,
+    session_browser_language,
+  from shopping_stage_data_raw
+  where event_name = 'add_payment_info'
+  group by all
+),
+
+add_shipping_info as (
+  select 
+    event_date,
+    client_id,
+    session_id,
+    session_channel_grouping,
+    case
+      when net.reg_domain(session_source) is not null then net.reg_domain(session_source)
+      else session_source
+    end as session_source,
+    session_campaign,
+    session_device_type,
+    session_country,
+    session_browser_language,
+  from shopping_stage_data_raw
+  where event_name = 'add_shipping_info'
+  group by all
+),
+
+purchase as (
+  select 
+    event_date,
+    client_id,
+    session_id,
+    session_channel_grouping,
+    case
+      when net.reg_domain(session_source) is not null then net.reg_domain(session_source)
+      else session_source
+    end as session_source,
+    session_campaign,
+    session_device_type,
+    session_country,
+    session_browser_language,
+  from shopping_stage_data_raw
+  where event_name = 'purchase'
+  group by all
+),
+
+union_steps as (
+  select 
+    *,
+    'All' as status,
+  "0 - All" as step_name,
+  0 as step_index
+  from all_sessions
+
+  union all
+
+  select 
+    *,
+    case 
+      when session_id not in (select session_id from all_sessions) then 'New funnel entries'
+      else 'Continuing funnel entries'
+    end as status,
+    "1 - View item" as step_name,
+    1 as step_index
+  from view_item
+
+  union all
+
+  select 
+    *,
+    case 
+      when session_id not in (select session_id from view_item) then 'New funnel entries'
+      else 'Continuing funnel entries'
+    end as status,
+    "2 - Add to cart" as step_name,
+    2 as step_index
+  from add_to_cart
+
+  union all
+
+  select 
+    *,
+    case 
+      when session_id not in (select session_id from add_to_cart) then 'New funnel entries'
+      else 'Continuing funnel entries'
+    end as status,
+    "3 - Begin checkout" as step_name,
+    3 as step_index
+  from begin_checkout
+
+  union all
+
+  select 
+    *,
+    case 
+      when session_id not in (select session_id from begin_checkout) then 'New funnel entries'
+      else 'Continuing funnel entries'
+    end as status,
+    "4 - Add shipping info" as step_name,
+    4 as step_index
+  from add_shipping_info
+
+  union all
+
+  select 
+    *,
+    case 
+      when session_id not in (select session_id from add_shipping_info) then 'New funnel entries'
+      else 'Continuing funnel entries'
+    end as status,
+    "5 - Add payment info" as step_name,
+    5 as step_index
+  from add_payment_info
+  
+  union all
+
+  select 
+    *,
+    case 
+      when session_id not in (select session_id from add_payment_info) then 'New funnel entries'
+      else 'Continuing funnel entries'
+    end as status,
+    "6 - Purchase" as step_name,
+    6 as step_index
+  from purchase
+),
+ 
+union_steps_def as (
+  select
+    event_date,
+    client_id,
+    session_id,
+    session_channel_grouping,
+    session_source,
+    session_campaign,
+    session_device_type,
+    session_country,
+    session_browser_language,
+    step_name,
+    step_index,
+    case 
+      when step_name = '6 - Purchase' then null 
+      else step_index + 1 
+    end as step_index_next_step_real,
+    
+    lead(step_index, 1) over (
+      partition by client_id, session_id, session_device_type, session_country, session_browser_language, session_channel_grouping, session_source, session_campaign
+      order by event_date, client_id, session_id, session_device_type, session_country, session_browser_language, session_channel_grouping, session_source, session_campaign, step_name
+    ) as step_index_next_step,
+    status,
+    lead(client_id, 1) over (
+      partition by client_id, session_id, session_device_type, session_country, session_browser_language, session_channel_grouping, session_source, session_campaign
+      order by event_date, client_id, session_id, session_device_type, session_country, session_browser_language, session_channel_grouping, session_source, session_campaign, step_name
+    ) as client_id_next_step,
+    lead(session_id, 1) over (
+      partition by client_id, session_id, session_device_type, session_country, session_browser_language, session_channel_grouping, session_source, session_campaign
+      order by event_date, client_id, session_id, session_device_type, session_country, session_browser_language, session_channel_grouping, session_source, session_campaign, step_name
+    ) as session_id_next_step,
+  from union_steps
+)
+
+select 
+    event_date,
+    client_id,
+    session_id,
+    session_channel_grouping,
+    session_source,
+    session_campaign,
+    session_device_type,
+    session_country,
+    session_browser_language,
+    step_name,
+    step_index,
+    step_index_next_step_real,
+    step_index_next_step,
+    status,
+    case 
+      when step_name = '6 - Purchase' then null 
+      else case when step_index_next_step_real = step_index_next_step then client_id_next_step else null end 
+    end as client_id_next_step,
+    case 
+      when step_name = '6 - Purchase' then null 
+      else case when step_index_next_step_real = step_index_next_step then session_id_next_step else null end 
+    end as session_id_next_step,
+from union_steps_def
+```
