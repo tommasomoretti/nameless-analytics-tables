@@ -37,7 +37,7 @@ CREATE TABLE IF NOT EXISTS `project_id.dataset_id.table_id` (
 ) 
 
 PARTITION BY event_date
-CLUSTER BY client_id, session_id, event_name
+CLUSTER BY event_name
 OPTIONS (description = 'Nameless Analytics | Main table')
 ```
 
