@@ -43,9 +43,9 @@ OPTIONS (description = 'Nameless Analytics | Main table')
 
 ## Query examples
 Here some query examples for make tables for:
-- [user](https://github.com/tommasomoretti/nameless-analytics-reporting-queries?tab=readme-ov-file#users)
-- [session](https://github.com/tommasomoretti/nameless-analytics-reporting-queries?tab=readme-ov-file#sessions)
-- [pages](https://github.com/tommasomoretti/nameless-analytics-reporting-queries?tab=readme-ov-file#pages)
+- [User](https://github.com/tommasomoretti/nameless-analytics-reporting-queries?tab=readme-ov-file#users)
+- [Session](https://github.com/tommasomoretti/nameless-analytics-reporting-queries?tab=readme-ov-file#sessions)
+- [Pages](https://github.com/tommasomoretti/nameless-analytics-reporting-queries?tab=readme-ov-file#pages)
 - [Ecommerce: transactions](https://github.com/tommasomoretti/nameless-analytics-reporting-queries?tab=readme-ov-file#ecommerce-transactions)
 - [Ecommerce: products](https://github.com/tommasomoretti/nameless-analytics-reporting-queries?tab=readme-ov-file#ecommerce-products)
 - [Ecommerce: shopping stages - Closed funnel](https://github.com/tommasomoretti/nameless-analytics-reporting-queries?tab=readme-ov-file#ecommerce-shopping-stages---closed-funnel)
