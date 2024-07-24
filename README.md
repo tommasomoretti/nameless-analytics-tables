@@ -59,6 +59,8 @@ with user_data_raw as (
     -- USER DATA
     client_id,
     --- (select value.string from unnest (user_data) where name = 'user_id') as user_id,
+    --- (select value.string from unnest (user_data) where name = 'customer_id') as customer_id,
+
     first_value(event_timestamp) over (partition by client_id order by event_timestamp asc) as min_user_timestamp,
     first_value(event_timestamp) over (partition by client_id order by event_timestamp desc) as max_user_timestamp,
     first_value((select value.string from unnest (event_data) where name = 'channel_grouping')) over (partition by client_id order by event_timestamp asc) as user_channel_grouping,
@@ -84,6 +86,7 @@ user_data_product_def as (
   select
     client_id,
     -- user_id,
+    -- customer_id,
     user_channel_grouping,
     case
       when net.reg_domain(user_source) is not null then net.reg_domain(user_source)
@@ -129,6 +132,7 @@ user_data_session_def as (
   select 
     client_id,
     -- user_id,
+    -- customer_id,
     user_channel_grouping,
     user_source,
     user_campaign,
@@ -154,6 +158,7 @@ user_data_def as(
   select 
     client_id,
     -- user_id,
+    -- customer_id,
     case 
       when session_number = 1 then client_id
       else null
@@ -186,7 +191,7 @@ user_data_def as(
     sum(item_quantity_refunded) as item_quantity_refunded,
     sum(item_revenue_purchased) as purchase_revenue,
     sum(item_revenue_refunded) as refund_revenue,
-    sum(item_revenue_purchased) + sum(item_revenue_refunded) as total_revenue_net_refund,
+    sum(item_revenue_purchased) + sum(item_revenue_refunded) as revenue_net_refund,
   from user_data_session_def
   group by all
 ),
@@ -194,6 +199,8 @@ user_data_def as(
 def as (
   select 
     client_id,
+    -- user_id,
+    -- customer_id,
     user_channel_grouping,
     user_source,
     user_campaign,
@@ -202,18 +209,25 @@ def as (
     returning_user,
     max(returning_user) over (partition by client_id) as returning_user_id,
     case 
-      when sum(purchase) = 1 then 'New customer'
-      when sum(purchase) > 1 then 'Returning customer'
-      else 'Not a customer'
-    end as customer_type,
-    case 
-      when sum(purchase) >= 1 then 1
-      else null
-    end as customer,
+      when sum(purchase) = 0 then 'Not customer'
+      when sum(purchase) >= 1 then 'Customer'
+    end as is_customer,
     case 
       when sum(purchase) = 0 then 1
       else null
-    end as not_a_customer,
+    end as not_customers,
+    case 
+      when sum(purchase) >= 1 then 1
+      else null
+    end as customers,
+    case 
+      when sum(purchase) = 1 then 1
+      else null
+    end as new_customers,
+    case 
+      when sum(purchase) > 1 then 1
+      else null
+    end as returning_customers,
     min_user_timestamp,
     max(min_user_timestamp) over (partition by client_id) as max_min_user_timestamp,
     max_user_timestamp,
@@ -225,7 +239,6 @@ def as (
     days_from_last_visit,
     max(days_from_last_visit) over (partition by client_id) as max_days_from_last_visit,
     count(distinct session_id) as sessions,
-    sum(purchase) / count(distinct session_id) as session_conversion_rate,
     sum(page_view) as page_view,
     sum(purchase) as purchase,
     sum(refund) as refund,
@@ -233,26 +246,35 @@ def as (
     sum(item_quantity_refunded) as item_quantity_refunded,
     sum(purchase_revenue) as purchase_revenue,
     sum(refund_revenue) as refund_revenue,
-    sum(total_revenue_net_refund) as total_revenue_net_refund
+    sum(revenue_net_refund) as revenue_net_refund
   from user_data_def
   group by all
 )
 
 select 
   client_id,
+  -- user_id,
+  -- customer_id,
+  min_user_timestamp,
+  max_user_timestamp,
+  max(max_days_since_first_visit) as max_days_since_first_visit,
+  max(max_days_from_last_visit) as max_days_from_last_visit,
   user_channel_grouping,
   user_source,
   user_campaign,
   max(new_user_id) as new_user_id,
   max(returning_user_id) as returning_user_id,
-  max(customer) as customer,
-  max(not_a_customer) as not_a_customer,
-  min_user_timestamp,
-  max_user_timestamp,
-  max_days_since_first_visit,
-  max_days_from_last_visit,
+  is_customer,
+  case 
+    when sum(purchase) = 1 then 'New customer'
+    when sum(purchase) > 1 then 'Returning customer'
+    else 'Not customer'
+  end as customer_type,
+  max(not_customers) as not_customers,
+  max(customers) as customers,
+  max(new_customers) as new_customers,
+  max(returning_customers) as returning_customers,
   sum(sessions) as sessions,
-  avg(session_conversion_rate) as session_conversion_rate,
   sum(page_view) as page_view,
   sum(purchase) as purchase,
   sum(refund) as refund,
@@ -260,7 +282,8 @@ select
   sum(item_quantity_refunded) as item_quantity_refunded,
   sum(purchase_revenue) as purchase_revenue,
   sum(refund_revenue) as refund_revenue,
-  sum(total_revenue_net_refund) as total_revenue_net_refund
+  sum(revenue_net_refund) as revenue_net_refund
+  -- RFM da fare
 from def
 group by all
 ```
@@ -272,6 +295,7 @@ with session_data_raw as (
     -- USER DATA
     client_id,   
     --- (select value.string from unnest (event_data) where name = 'user_id') as user_id,
+    --- (select value.string from unnest (user_data) where name = 'customer_id') as customer_id,
 
     -- SESSION DATA
     session_id, 
@@ -281,6 +305,7 @@ with session_data_raw as (
     first_value((select value.string from unnest (event_data) where name = 'source')) over (partition by session_id order by event_timestamp) as session_source,
     first_value((select value.string from unnest (event_data) where name = 'campaign')) over (partition by session_id order by event_timestamp) as session_campaign,
     first_value((select value.string from unnest (event_data) where name = 'page_location')) over (partition by session_id order by event_timestamp) as session_landing_page_location,
+    first_value((select value.string from unnest (event_data) where name = 'page_title')) over (partition by session_id order by event_timestamp) as session_landing_page_title,
     first_value((select value.string from unnest (event_data) where name = 'page_hostname')) over (partition by session_id order by event_timestamp) as session_hostname,
     first_value((select value.string from unnest (event_data) where name = 'device_type')) over (partition by session_id order by event_timestamp) as session_device_type,
     first_value((select value.string from unnest (event_data) where name = 'country')) over (partition by session_id order by event_timestamp) as session_country,
@@ -302,6 +327,7 @@ session_data_def as (
     event_date,
     client_id,
     -- user_id,
+    -- customer_id,
     dense_rank() over (partition by client_id order by min_session_timestamp asc) as session_number,
     session_id,
     min_session_timestamp,
@@ -313,6 +339,7 @@ session_data_def as (
     end as session_source,
     session_campaign,
     session_landing_page_location,
+    session_landing_page_title,
     session_hostname,
     session_device_type,
     session_country,
@@ -352,6 +379,7 @@ session_data as (
     event_date,
     client_id,
     -- user_id,
+    -- customer_id,
     case 
       when session_number = 1 then 'new_user'
       when session_number > 1 then 'returning_user'
@@ -375,6 +403,7 @@ session_data as (
     session_browser_name,
     session_browser_language,
     session_landing_page_location,
+    session_landing_page_title,
     session_hostname,
     (max_session_timestamp - min_session_timestamp) / 1000 as session_duration_sec,
     countif(event_name = 'page_view') as page_view,
@@ -405,6 +434,7 @@ select
   event_date,
   client_id,
   -- user_id,
+  -- customer_id,
   user_type,
   new_user,
   returning_user,
@@ -427,6 +457,7 @@ select
   session_browser_name,
   session_browser_language,
   session_landing_page_location,
+  session_landing_page_title,
   session_hostname,
   session_duration_sec,
   page_view,
@@ -462,6 +493,7 @@ with page_data_raw as (
     -- USER DATA
     client_id,
     --- (select value.string from unnest (user_data) where name = 'user_id') as user_id,
+    --- (select value.string from unnest (user_data) where name = 'customer_id') as customer_id,
 
     -- SESSION DATA
     session_id, 
@@ -471,6 +503,7 @@ with page_data_raw as (
     first_value((select value.string from unnest (event_data) where name = 'source')) over (partition by session_id order by event_timestamp) as session_source,
     first_value((select value.string from unnest (event_data) where name = 'campaign')) over (partition by session_id order by event_timestamp) as session_campaign,
     first_value((select value.string from unnest (event_data) where name = 'page_location')) over (partition by session_id order by event_timestamp) as session_landing_page_location,
+    first_value((select value.string from unnest (event_data) where name = 'page_title')) over (partition by session_id order by event_timestamp) as session_landing_page_title,
     first_value((select value.string from unnest (event_data) where name = 'page_hostname')) over (partition by session_id order by event_timestamp) as session_hostname,
     first_value((select value.string from unnest (event_data) where name = 'device_type')) over (partition by session_id order by event_timestamp) as session_device_type,
     first_value((select value.string from unnest (event_data) where name = 'country')) over (partition by session_id order by event_timestamp) as session_country,
@@ -496,6 +529,7 @@ page_data_def as(
     event_date,
     client_id,
     -- user_id,
+    -- customer_id,
     dense_rank() over (partition by client_id order by min_session_timestamp asc) as session_number,
     session_id,
     min_session_timestamp,
@@ -506,6 +540,7 @@ page_data_def as(
     end as session_source,
     session_campaign,
     session_landing_page_location,
+    session_landing_page_title,
     session_hostname,
     session_device_type,
     session_country,
@@ -513,6 +548,7 @@ page_data_def as(
     session_browser_language,
     event_name,
     event_timestamp,
+    dense_rank() over (partition by session_id order by event_timestamp asc) as page_view_number,
     page_id,
     page_location,
     page_hostname,
@@ -527,6 +563,7 @@ select
   event_date,
   client_id,
   -- user_id,
+  -- customer_id,
   case 
     when session_number = 1 then 'new_user'
     when session_number > 1 then 'returning_user'
@@ -550,7 +587,9 @@ select
   session_browser_name,
   session_browser_language,
   session_landing_page_location,
+  session_landing_page_title,
   session_hostname,
+  page_view_number,
   page_id,
   page_location,
   page_hostname,
@@ -569,6 +608,7 @@ with ecommerce_data_raw as (
     -- USER DATA
     client_id,
     --- (select value.string from unnest (user_data) where name = 'user_id') as user_id,
+    --- (select value.string from unnest (user_data) where name = 'customer_id') as customer_id,
 
     -- SESSION DATA
     session_id, 
@@ -577,6 +617,7 @@ with ecommerce_data_raw as (
     first_value((select value.string from unnest (event_data) where name = 'source')) over (partition by session_id order by event_timestamp) as session_source,
     first_value((select value.string from unnest (event_data) where name = 'campaign')) over (partition by session_id order by event_timestamp) as session_campaign,
     first_value((select value.string from unnest (event_data) where name = 'page_location')) over (partition by session_id order by event_timestamp) as session_landing_page_location,
+    first_value((select value.string from unnest (event_data) where name = 'page_title')) over (partition by session_id order by event_timestamp) as session_landing_page_title,
     first_value((select value.string from unnest (event_data) where name = 'device_type')) over (partition by session_id order by event_timestamp) as session_device_type,
     first_value((select value.string from unnest (event_data) where name = 'country')) over (partition by session_id order by event_timestamp) as session_country,
     first_value((select value.string from unnest (event_data) where name = 'browser_name')) over (partition by session_id order by event_timestamp) as session_browser_name,
@@ -597,6 +638,7 @@ ecommerce_data_def as (
     event_date,
     client_id, 
     -- user_id,
+    -- customer_id,
     dense_rank() over (partition by client_id order by min_session_timestamp asc) as session_number,
     session_id,
     min_session_timestamp,
@@ -607,6 +649,7 @@ ecommerce_data_def as (
     end as session_source,
     session_campaign,
     session_landing_page_location,
+    session_landing_page_title,
     session_device_type,
     session_country,
     session_browser_name,
@@ -648,6 +691,7 @@ ecommerce_data as (
     event_date,
     client_id, 
     -- user_id,
+    -- customer_id,
     case 
       when session_number = 1 then 'new_user'
       when session_number > 1 then 'returning_user'
@@ -667,6 +711,7 @@ ecommerce_data as (
     session_source,
     session_campaign,
     session_landing_page_location,
+    session_landing_page_title,
     session_device_type,
     session_country,
     session_browser_name,
@@ -694,6 +739,7 @@ select
   event_date,
   client_id,
   -- user_id,
+  -- customer_id,
   user_type,
   new_user,
   returning_user,
@@ -704,6 +750,7 @@ select
   session_source,
   session_campaign,
   session_landing_page_location,
+  session_landing_page_title,
   session_device_type,
   session_country,
   session_browser_name,
@@ -734,6 +781,7 @@ with ecommerce_data_raw as (
     -- USER DATA
     client_id,
     --- (select value.string from unnest (user_data) where name = 'user_id') as user_id,
+    --- (select value.string from unnest (user_data) where name = 'customer_id') as customer_id,
 
     -- SESSION DATA
     session_id, 
@@ -742,6 +790,7 @@ with ecommerce_data_raw as (
     first_value((select value.string from unnest (event_data) where name = 'source')) over (partition by session_id order by event_timestamp) as session_source,
     first_value((select value.string from unnest (event_data) where name = 'campaign')) over (partition by session_id order by event_timestamp) as session_campaign,
     first_value((select value.string from unnest (event_data) where name = 'page_location')) over (partition by session_id order by event_timestamp) as session_landing_page_location,
+    first_value((select value.string from unnest (event_data) where name = 'page_title')) over (partition by session_id order by event_timestamp) as session_landing_page_title,
     first_value((select value.string from unnest (event_data) where name = 'device_type')) over (partition by session_id order by event_timestamp) as session_device_type,
     first_value((select value.string from unnest (event_data) where name = 'country')) over (partition by session_id order by event_timestamp) as session_country,
     first_value((select value.string from unnest (event_data) where name = 'browser_name')) over (partition by session_id order by event_timestamp) as session_browser_name,
@@ -773,6 +822,7 @@ ecommerce_data_def as (
     end as session_source,
     session_campaign,
     session_landing_page_location,
+    session_landing_page_title,
     session_device_type,
     session_country,
     session_browser_name,
@@ -858,6 +908,7 @@ select
   session_source,
   session_campaign,
   session_landing_page_location,
+  session_landing_page_title,
   session_device_type,
   session_country,
   session_browser_name,
@@ -927,6 +978,7 @@ select
   session_source,
   session_campaign,
   session_landing_page_location,
+  session_landing_page_title,
   session_device_type,
   session_country,
   session_browser_name,
@@ -988,6 +1040,7 @@ with shopping_stage_data_raw as (
     -- USER DATA
     client_id,
     --- (select value.string from unnest (user_data) where name = 'user_id') as user_id,
+    --- (select value.string from unnest (user_data) where name = 'customer_id') as customer_id,
 
     -- SESSION DATA
     session_id, 
@@ -1234,6 +1287,7 @@ with shopping_stage_data_raw as (
     -- USER DATA
     client_id,
     --- (select value.string from unnest (user_data) where name = 'user_id') as user_id,
+    --- (select value.string from unnest (user_data) where name = 'customer_id') as customer_id,
 
     -- SESSION DATA
     session_id, 
