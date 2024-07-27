@@ -304,10 +304,8 @@ Run this query to create the views and the main table.
 
 ``` sql
 # NAMELESS ANALYTICS 
-
 declare project_name string default 'tom-moretti';  -- Change this according to your project name
 declare dataset_name string default 'nameless_analytics'; -- Change this according to your dataset name
-
 
 declare main_table_path string;
 declare users_path string;
@@ -402,7 +400,7 @@ set users_sql = format(
           -- ECOMMERCE DATA
           (select value.json from unnest(event_data) where name = 'ecommerce') as transaction_data,
           json_extract_array((select value.json from unnest(event_data) where name = 'ecommerce'), '$.items') as items_data
-        from `tom-moretti.nameless_analytics.hits`
+        from %s
       ),
 
       user_data_product_def as (
@@ -611,7 +609,7 @@ set users_sql = format(
       group by all
     );
   """
-, users_path);
+, users_path, main_table_path);
 
 
 # Sessions view
@@ -647,7 +645,7 @@ set sessions_sql = format(
 
           -- ECOMMERCE DATA
           (select value.json from unnest(event_data) where name = 'ecommerce') as transaction_data,
-        from `tom-moretti.nameless_analytics.hits`
+        from %s
       ),
 
       session_data_def as (
@@ -814,7 +812,7 @@ set sessions_sql = format(
       from session_data
     );
   """
-, sessions_path);
+, sessions_path, main_table_path);
 
 
 # Pages view
@@ -854,7 +852,7 @@ set pages_sql = format(
           (select value.string from unnest (event_data) where name = 'page_hostname') as page_hostname,
           (select value.string from unnest (event_data) where name = 'page_title') as page_title,
           (select value.string from unnest (event_data) where name = 'content_group') as content_group,
-        from `tom-moretti.nameless_analytics.hits` 
+        from %s 
       ),
 
       page_data_def as(
@@ -934,7 +932,7 @@ set pages_sql = format(
       group by all
     );
   """
-, pages_path);
+, pages_path, main_table_path);
 
 
 # Ecommerce - Transactions
@@ -968,7 +966,7 @@ set ec_transactions_sql = format(
 
           -- ECOMMERCE DATA
           (select value.json from unnest(event_data) where name = 'ecommerce') as transaction_data,
-        from `tom-moretti.nameless_analytics.hits`
+        from %s
       ),
 
       ecommerce_data_def as (
@@ -1111,7 +1109,7 @@ set ec_transactions_sql = format(
       from ecommerce_data
     );
   """
-, ec_transactions_path);
+, ec_transactions_path, main_table_path);
 
 
 # Ecommerce - Products
@@ -1146,7 +1144,7 @@ set ec_products_sql = format(
           -- ECOMMERCE DATA
           (select value.json from unnest(event_data) where name = 'ecommerce') as transaction_data,
           json_extract_array((select value.json from unnest(event_data) where name = 'ecommerce'), '$.items') as items_data
-        from `tom-moretti.nameless_analytics.hits` 
+        from %s
       ),
 
       ecommerce_data_def as (
@@ -1373,7 +1371,7 @@ set ec_products_sql = format(
       from ecommerce_data
     );
   """
-, ec_products_path);
+, ec_products_path, main_table_path);
 
 
 # Ecommerce: Shopping Stages - Closed funnel
@@ -1406,7 +1404,7 @@ set ec_shopping_stages_closed_funnel_sql = format(
 
           -- ECOMMERCE DATA
           -- (select value.json from unnest(event_data) where name = 'ecommerce') as transaction_data,
-        from `tom-moretti.nameless_analytics.hits`
+        from %s
       ),
 
       all_sessions as (
@@ -1623,7 +1621,7 @@ set ec_shopping_stages_closed_funnel_sql = format(
       group by all
     );
   """
-, ec_shopping_stages_closed_funnel_path);
+, ec_shopping_stages_closed_funnel_path, main_table_path);
 
 
 # Ecommerce: Shopping Stages - Open funnel
@@ -1656,7 +1654,7 @@ set ec_shopping_stages_open_funnel_sql = format(
 
           -- ECOMMERCE DATA
           -- (select value.json from unnest(event_data) where name = 'ecommerce') as transaction_data,
-        from `tom-moretti.nameless_analytics.hits`
+        from %s
       ),
 
       all_sessions as (
@@ -1932,7 +1930,7 @@ set ec_shopping_stages_open_funnel_sql = format(
       from union_steps_def
     );
   """
-, ec_shopping_stages_open_funnel_path);
+, ec_shopping_stages_open_funnel_path, main_table_path);
 
 
 # ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------
