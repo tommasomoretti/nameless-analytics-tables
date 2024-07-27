@@ -1,56 +1,301 @@
 # Nameless Analytics: Reporting queries
 
-## The main table
+## Main table
 
-This is the schema of the Google BigQuery main table. You have to create it manually before starting to stream events.
+This is the schema of the raw data main table. You have to create it manually before starting stream events. 
 
-<img width="1411" alt="Screenshot 2024-06-29 alle 21 46 44" src="https://github.com/tommasomoretti/nameless-analytics-reporting-queries/assets/29273232/c5ba6148-a83d-4484-af11-bf16c0182b03">
+It's a partitioned table by event_date, clustered by client_id, session_id and event_name.  
 
-<img width="1412" alt="Screenshot 2024-06-29 alle 21 45 21" src="https://github.com/tommasomoretti/nameless-analytics-reporting-queries/assets/29273232/01e7da5f-dc22-44dd-ac60-4ad3102fa5ba">
+| name                    | mode     | type    | description                             |
+|-------------------------|----------|---------|-----------------------------------------|
+| event_date              | NULLABLE | DATE    | Date of the request                     |
+| client_id               | NULLABLE | STRING  | Client id of the user                   |
+| session_id              | NULLABLE | STRING  | Session id of the user                  |
+| event_name              | NULLABLE | STRING  | Event name of the request               |
+| event_timestamp         | NULLABLE | INTEGER | Insert timestamp of the event           |
+| event_data              | REPEATED | RECORD  | Event data                              |
+| event_data.name         | NULLABLE | STRING  | Event data parameter name               |
+| event_data.value        | NULLABLE | RECORD  | Event data parameter value name         |
+| event_data.value.string | NULLABLE | STRING  | Event data parameter string value       |
+| event_data.value.int    | NULLABLE | INTEGER | Event data parameter int number value   |
+| event_data.value.float  | NULLABLE | FLOAT   | Event data parameter float number value |
+| event_data.value.json   | NULLABLE | JSON    | Event data parameter JSON value         |
+| consent_data            | REPEATED | RECORD  | Consent data                            |
+| consent_data.name       | NULLABLE | STRING  | Consent data parameter name             |
+| consent_data.value      | NULLABLE | BOOLEAN | Consent data parameter boolean value    |
+
+To create the main table and the default views, see [Create main table and wiews]()
 
 
-## Query examples
-Here some query examples for make tables for:
-- [User](https://github.com/tommasomoretti/nameless-analytics-reporting-queries?tab=readme-ov-file#users)
-- [Session](https://github.com/tommasomoretti/nameless-analytics-reporting-queries?tab=readme-ov-file#sessions)
-- [Pages](https://github.com/tommasomoretti/nameless-analytics-reporting-queries?tab=readme-ov-file#pages)
-- [Ecommerce: transactions](https://github.com/tommasomoretti/nameless-analytics-reporting-queries?tab=readme-ov-file#ecommerce-transactions)
-- [Ecommerce: products](https://github.com/tommasomoretti/nameless-analytics-reporting-queries?tab=readme-ov-file#ecommerce-products)
-- [Ecommerce: shopping stages - Closed funnel](https://github.com/tommasomoretti/nameless-analytics-reporting-queries?tab=readme-ov-file#ecommerce-shopping-stages---closed-funnel)
-- [Ecommerce: shopping stages - Open funnel](https://github.com/tommasomoretti/nameless-analytics-reporting-queries?tab=readme-ov-file#ecommerce-shopping-stages---open-funnel)
+
+## Views schema
+This is the schema for the default views:
+- Users
+- Sessions
+- Pages
+- Ecommerce: Transactions
+- Ecommerce: Products
+- Ecommerce: Shopping stages - Closed funnel
+- Ecommerce: Shopping stages - Open funnel
 
 
+### Users view
 
-## Tables schema
-### User table
+| name                       | mode     | type      | description |
+|----------------------------|----------|-----------|-------------|
+| client_id                  | NULLABLE | STRING    |             |
+| min_user_timestamp         | NULLABLE | TIMESTAMP |             |
+| max_user_timestamp         | NULLABLE | TIMESTAMP |             |
+| max_days_since_first_visit | NULLABLE | INTEGER   |             |
+| max_days_from_last_visit   | NULLABLE | INTEGER   |             |
+| user_channel_grouping      | NULLABLE | STRING    |             |
+| user_source                | NULLABLE | STRING    |             |
+| user_campaign              | NULLABLE | STRING    |             |
+| new_user_id                | NULLABLE | STRING    |             |
+| returning_user_id          | NULLABLE | STRING    |             |
+| is_customer                | NULLABLE | STRING    |             |
+| customer_type              | NULLABLE | STRING    |             |
+| not_customers              | NULLABLE | INTEGER   |             |
+| customers                  | NULLABLE | INTEGER   |             |
+| new_customers              | NULLABLE | INTEGER   |             |
+| returning_customers        | NULLABLE | INTEGER   |             |
+| sessions                   | NULLABLE | INTEGER   |             |
+| page_view                  | NULLABLE | INTEGER   |             |
+| purchase                   | NULLABLE | INTEGER   |             |
+| refund                     | NULLABLE | INTEGER   |             |
+| item_quantity_purchased    | NULLABLE | INTEGER   |             |
+| item_quantity_refunded     | NULLABLE | INTEGER   |             |
+| purchase_revenue           | NULLABLE | FLOAT     |             |
+| refund_revenue             | NULLABLE | FLOAT     |             |
+| revenue_net_refund         | NULLABLE | FLOAT     |             |
 
-| Field name                 | Type      | Description |
-| -------------------------- | --------- | ----------- |
-| client_id	                 | STRING    |             |	
-| min_user_timestamp         | TIMESTAMP |             |
-| max_user_timestamp         | TIMESTAMP |             |
-| max_days_since_first_visit | INTEGER   |             |
-| max_days_from_last_visit   | INTEGER   |             |
-| user_channel_grouping      | STRING    |             |
-| user_source	               | STRING    |             |
-| user_campaign	             | STRING    |             |
-| new_user_id	               | STRING    |             |
-| returning_user_id	         | STRING    |             |
-| is_customer	               | STRING    |             |
-| customer_type	             | STRING    |             |
-| not_customers	             | INTEGER   |             |
-| customers	                 | INTEGER	 |             |
-| new_customers	             | INTEGER	 |             |
-| returning_customers	       | INTEGER	 |             |
-| sessions                   | INTEGER	 |             |
-| page_view	                 | INTEGER	 |             |
-| purchase                   | INTEGER	 |             |
-| refund                     | INTEGER	 |             |
-| item_quantity_purchased    | INTEGER	 |             |
-| item_quantity_refunded     | INTEGER	 |             |
-| purchase_revenue           | FLOAT	   |             |
-| refund_revenue             | FLOAT	   |             |
-| revenue_net_refund         | FLOAT	   |             |
+
+### Session
+
+| name                          | mode     | type    | description |
+|-------------------------------|----------|---------|-------------|
+| event_date                    | NULLABLE | DATE    |             |
+| client_id                     | NULLABLE | STRING  |             |
+| user_type                     | NULLABLE | STRING  |             |
+| new_user                      | NULLABLE | STRING  |             |
+| returning_user                | NULLABLE | STRING  |             |
+| session_number                | NULLABLE | INTEGER |             |
+| session_id                    | NULLABLE | STRING  |             |
+| min_session_timestamp         | NULLABLE | INTEGER |             |
+| new_session                   | NULLABLE | INTEGER |             |
+| engaged_session               | NULLABLE | INTEGER |             |
+| session_channel_grouping      | NULLABLE | STRING  |             |
+| session_source                | NULLABLE | STRING  |             |
+| session_campaign              | NULLABLE | STRING  |             |
+| session_device_type           | NULLABLE | STRING  |             |
+| session_country               | NULLABLE | STRING  |             |
+| session_browser_name          | NULLABLE | STRING  |             |
+| session_browser_language      | NULLABLE | STRING  |             |
+| session_landing_page_location | NULLABLE | STRING  |             |
+| session_landing_page_title    | NULLABLE | STRING  |             |
+| session_hostname              | NULLABLE | STRING  |             |
+| session_duration_sec          | NULLABLE | FLOAT   |             |
+| page_view                     | NULLABLE | INTEGER |             |
+| click_contact_button          | NULLABLE | INTEGER |             |
+| view_item_list                | NULLABLE | INTEGER |             |
+| select_item                   | NULLABLE | INTEGER |             |
+| view_item                     | NULLABLE | INTEGER |             |
+| add_to_wishlist               | NULLABLE | INTEGER |             |
+| add_to_cart                   | NULLABLE | INTEGER |             |
+| remove_from_cart              | NULLABLE | INTEGER |             |
+| view_cart                     | NULLABLE | INTEGER |             |
+| begin_checkout                | NULLABLE | INTEGER |             |
+| add_shipping_info             | NULLABLE | INTEGER |             |
+| add_payment_info              | NULLABLE | INTEGER |             |
+| purchase                      | NULLABLE | INTEGER |             |
+| refund                        | NULLABLE | INTEGER |             |
+| purchase_revenue              | NULLABLE | FLOAT   |             |
+| purchase_shipping             | NULLABLE | FLOAT   |             |
+| purchase_tax                  | NULLABLE | FLOAT   |             |
+| refund_revenue                | NULLABLE | FLOAT   |             |
+| refund_shipping               | NULLABLE | FLOAT   |             |
+| refund_tax                    | NULLABLE | FLOAT   |             |
+| revenue_net_refund            | NULLABLE | FLOAT   |             |
+| shipping_net_refund           | NULLABLE | FLOAT   |             |
+| tax_net_refund                | NULLABLE | FLOAT   |             |
+
+
+### Pages
+
+| name                          | mode     | type    | description |
+|-------------------------------|----------|---------|-------------|
+| event_date                    | NULLABLE | DATE    |             |
+| client_id                     | NULLABLE | STRING  |             |
+| user_type                     | NULLABLE | STRING  |             |
+| new_user                      | NULLABLE | STRING  |             |
+| returning_user                | NULLABLE | STRING  |             |
+| session_number                | NULLABLE | INTEGER |             |
+| session_id                    | NULLABLE | STRING  |             |
+| min_session_timestamp         | NULLABLE | INTEGER |             |
+| session_channel_grouping      | NULLABLE | STRING  |             |
+| session_source                | NULLABLE | STRING  |             |
+| session_campaign              | NULLABLE | STRING  |             |
+| session_device_type           | NULLABLE | STRING  |             |
+| session_country               | NULLABLE | STRING  |             |
+| session_browser_name          | NULLABLE | STRING  |             |
+| session_browser_language      | NULLABLE | STRING  |             |
+| session_landing_page_location | NULLABLE | STRING  |             |
+| session_landing_page_title    | NULLABLE | STRING  |             |
+| session_hostname              | NULLABLE | STRING  |             |
+| page_view_number              | NULLABLE | INTEGER |             |
+| page_id                       | NULLABLE | STRING  |             |
+| page_location                 | NULLABLE | STRING  |             |
+| page_hostname                 | NULLABLE | STRING  |             |
+| page_title                    | NULLABLE | STRING  |             |
+| content_group                 | NULLABLE | STRING  |             |
+| time_on_page_sec              | NULLABLE | FLOAT   |             |
+| page_view                     | NULLABLE | INTEGER |             |
+
+
+### Ecommerce: Transactions
+
+| name                          | mode     | type    | description |
+|-------------------------------|----------|---------|-------------|
+| event_date                    | NULLABLE | DATE    |             |
+| client_id                     | NULLABLE | STRING  |             |
+| user_type                     | NULLABLE | STRING  |             |
+| new_user                      | NULLABLE | STRING  |             |
+| returning_user                | NULLABLE | STRING  |             |
+| session_number                | NULLABLE | INTEGER |             |
+| session_id                    | NULLABLE | STRING  |             |
+| min_session_timestamp         | NULLABLE | INTEGER |             |
+| session_channel_grouping      | NULLABLE | STRING  |             |
+| session_source                | NULLABLE | STRING  |             |
+| session_campaign              | NULLABLE | STRING  |             |
+| session_landing_page_location | NULLABLE | STRING  |             |
+| session_landing_page_title    | NULLABLE | STRING  |             |
+| session_device_type           | NULLABLE | STRING  |             |
+| session_country               | NULLABLE | STRING  |             |
+| session_browser_name          | NULLABLE | STRING  |             |
+| session_browser_language      | NULLABLE | STRING  |             |
+| purchase                      | NULLABLE | INTEGER |             |
+| refund                        | NULLABLE | INTEGER |             |
+| transaction_id                | NULLABLE | STRING  |             |
+| transaction_currency          | NULLABLE | STRING  |             |
+| transaction_coupon            | NULLABLE | STRING  |             |
+| purchase_revenue              | NULLABLE | FLOAT   |             |
+| purchase_shipping             | NULLABLE | FLOAT   |             |
+| purchase_tax                  | NULLABLE | FLOAT   |             |
+| refund_revenue                | NULLABLE | FLOAT   |             |
+| refund_shipping               | NULLABLE | FLOAT   |             |
+| refund_tax                    | NULLABLE | FLOAT   |             |
+| purchase_net_refund           | NULLABLE | INTEGER |             |
+| revenue_net_refund            | NULLABLE | FLOAT   |             |
+| shipping_net_refund           | NULLABLE | FLOAT   |             |
+| tax_net_refund                | NULLABLE | FLOAT   |             |
+
+
+### Ecommerce: Products
+
+| name                            | mode     | type    | description |
+|---------------------------------|----------|---------|-------------|
+| event_date                      | NULLABLE | DATE    |             |
+| client_id                       | NULLABLE | STRING  |             |
+| user_type                       | NULLABLE | STRING  |             |
+| new_user                        | NULLABLE | STRING  |             |
+| returning_user                  | NULLABLE | STRING  |             |
+| session_number                  | NULLABLE | INTEGER |             |
+| session_id                      | NULLABLE | STRING  |             |
+| min_session_timestamp           | NULLABLE | INTEGER |             |
+| session_channel_grouping        | NULLABLE | STRING  |             |
+| session_source                  | NULLABLE | STRING  |             |
+| session_campaign                | NULLABLE | STRING  |             |
+| session_landing_page_location   | NULLABLE | STRING  |             |
+| session_landing_page_title      | NULLABLE | STRING  |             |
+| session_device_type             | NULLABLE | STRING  |             |
+| session_country                 | NULLABLE | STRING  |             |
+| session_browser_name            | NULLABLE | STRING  |             |
+| session_browser_language        | NULLABLE | STRING  |             |
+| purchase                        | NULLABLE | INTEGER |             |
+| refund                          | NULLABLE | INTEGER |             |
+| transaction_id                  | NULLABLE | STRING  |             |
+| view_promotion                  | NULLABLE | INTEGER |             |
+| select_promotion                | NULLABLE | INTEGER |             |
+| view_item_list                  | NULLABLE | INTEGER |             |
+| select_item                     | NULLABLE | INTEGER |             |
+| view_item                       | NULLABLE | INTEGER |             |
+| add_to_wishlist                 | NULLABLE | INTEGER |             |
+| add_to_cart                     | NULLABLE | INTEGER |             |
+| remove_from_cart                | NULLABLE | INTEGER |             |
+| view_cart                       | NULLABLE | INTEGER |             |
+| begin_checkout                  | NULLABLE | INTEGER |             |
+| add_shipping_info               | NULLABLE | INTEGER |             |
+| add_payment_info                | NULLABLE | INTEGER |             |
+| list_id                         | NULLABLE | STRING  |             |
+| list_name                       | NULLABLE | STRING  |             |
+| creative_name                   | NULLABLE | STRING  |             |
+| creative_slot                   | NULLABLE | STRING  |             |
+| promotion_id                    | NULLABLE | STRING  |             |
+| promotion_name                  | NULLABLE | STRING  |             |
+| item_list_id                    | NULLABLE | STRING  |             |
+| item_list_name                  | NULLABLE | STRING  |             |
+| item_affiliation                | NULLABLE | STRING  |             |
+| item_coupon                     | NULLABLE | STRING  |             |
+| item_discount                   | NULLABLE | FLOAT   |             |
+| item_brand                      | NULLABLE | STRING  |             |
+| item_id                         | NULLABLE | STRING  |             |
+| item_name                       | NULLABLE | STRING  |             |
+| item_variant                    | NULLABLE | STRING  |             |
+| item_category                   | NULLABLE | STRING  |             |
+| item_category_2                 | NULLABLE | STRING  |             |
+| item_category_3                 | NULLABLE | STRING  |             |
+| item_category_4                 | NULLABLE | STRING  |             |
+| item_category_5                 | NULLABLE | STRING  |             |
+| item_price                      | NULLABLE | FLOAT   |             |
+| item_quantity_purchased         | NULLABLE | INTEGER |             |
+| item_quantity_refunded          | NULLABLE | INTEGER |             |
+| item_quantity_added_to_cart     | NULLABLE | INTEGER |             |
+| item_quantity_removed_from_cart | NULLABLE | INTEGER |             |
+| item_purchase_revenue           | NULLABLE | FLOAT   |             |
+| item_refund_revenue             | NULLABLE | FLOAT   |             |
+| item_unique_purchases           | NULLABLE | INTEGER |             |
+| purchase_net_refund             | NULLABLE | INTEGER |             |
+| item_revenue_net_refund         | NULLABLE | FLOAT   |             |
+
+
+### Ecommerce: Shopping stages - Closed funnel
+
+| name                     | mode     | type   | description |
+|--------------------------|----------|--------|-------------|
+| event_date               | NULLABLE | DATE   |             |
+| client_id                | NULLABLE | STRING |             |
+| session_id               | NULLABLE | STRING |             |
+| session_channel_grouping | NULLABLE | STRING |             |
+| session_source           | NULLABLE | STRING |             |
+| session_campaign         | NULLABLE | STRING |             |
+| session_device_type      | NULLABLE | STRING |             |
+| session_country          | NULLABLE | STRING |             |
+| session_browser_language | NULLABLE | STRING |             |
+| step_name                | NULLABLE | STRING |             |
+| client_id_next_step      | NULLABLE | STRING |             |
+| session_id_next_step     | NULLABLE | STRING |             |
+
+
+### Ecommerce: Shopping stages - Open funnel
+
+| name                      | mode     | type    | description |
+|---------------------------|----------|---------|-------------|
+| event_date                | NULLABLE | DATE    |             |
+| client_id                 | NULLABLE | STRING  |             |
+| session_id                | NULLABLE | STRING  |             |
+| session_channel_grouping  | NULLABLE | STRING  |             |
+| session_source            | NULLABLE | STRING  |             |
+| session_campaign          | NULLABLE | STRING  |             |
+| session_device_type       | NULLABLE | STRING  |             |
+| session_country           | NULLABLE | STRING  |             |
+| session_browser_language  | NULLABLE | STRING  |             |
+| step_name                 | NULLABLE | STRING  |             |
+| step_index                | NULLABLE | INTEGER |             |
+| step_index_next_step_real | NULLABLE | INTEGER |             |
+| step_index_next_step      | NULLABLE | INTEGER |             |
+| status                    | NULLABLE | STRING  |             |
+| client_id_next_step       | NULLABLE | STRING  |             |
+| session_id_next_step      | NULLABLE | STRING  |             |
 
 
 
