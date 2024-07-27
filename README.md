@@ -1939,12 +1939,12 @@ set ec_shopping_stages_open_funnel_sql = format(
 
 # Create  tables 
 
-EXECUTE IMMEDIATE main_table_sql;
-EXECUTE IMMEDIATE users_sql;
-EXECUTE IMMEDIATE sessions_sql;
-EXECUTE IMMEDIATE pages_sql;
-EXECUTE IMMEDIATE ec_transactions_sql;
-EXECUTE IMMEDIATE ec_products_sql;
-EXECUTE IMMEDIATE ec_shopping_stages_closed_funnel_sql;
-EXECUTE IMMEDIATE ec_shopping_stages_open_funnel_sql;
+execute immediate main_table_sql;
+execute immediate users_sql;
+execute immediate sessions_sql;
+execute immediate pages_sql;
+execute immediate ec_transactions_sql;
+execute immediate ec_products_sql;
+execute immediate ec_shopping_stages_closed_funnel_sql;
+execute immediate ec_shopping_stages_open_funnel_sql;
 ```
