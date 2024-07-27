@@ -21,6 +21,39 @@ Here some query examples for make tables for:
 
 
 
+## Tables schema
+### User table
+
+| Field name                 | Type      | Description |
+| -------------------------- | --------- | ----------- |
+| client_id	                 | STRING    |             |	
+| min_user_timestamp         | TIMESTAMP |             |
+| max_user_timestamp         | TIMESTAMP |             |
+| max_days_since_first_visit | INTEGER   |             |
+| max_days_from_last_visit   | INTEGER   |             |
+| user_channel_grouping      | STRING    |             |
+| user_source	               | STRING    |             |
+| user_campaign	             | STRING    |             |
+| new_user_id	               | STRING    |             |
+| returning_user_id	         | STRING    |             |
+| is_customer	               | STRING    |             |
+| customer_type	             | STRING    |             |
+| not_customers	             | INTEGER   |             |
+| customers	                 | INTEGER	 |             |
+| new_customers	             | INTEGER	 |             |
+| returning_customers	       | INTEGER	 |             |
+| sessions                   | INTEGER	 |             |
+| page_view	                 | INTEGER	 |             |
+| purchase                   | INTEGER	 |             |
+| refund                     | INTEGER	 |             |
+| item_quantity_purchased    | INTEGER	 |             |
+| item_quantity_refunded     | INTEGER	 |             |
+| purchase_revenue           | FLOAT	   |             |
+| refund_revenue             | FLOAT	   |             |
+| revenue_net_refund         | FLOAT	   |             |
+
+
+
 ## Create main table and wiews
 Run this query to create the views and the main table.
 
