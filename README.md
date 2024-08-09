@@ -1,6 +1,6 @@
 ![Na logo beta](https://github.com/tommasomoretti/nameless-analytics/assets/29273232/7d4ded5e-4b79-46a2-b089-03997724fd10)
 
-## Main table
+## Main table schema
 
 This is the schema of the raw data main table. You have to create it manually before starting stream events. 
 
