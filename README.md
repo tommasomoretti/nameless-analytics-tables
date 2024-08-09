@@ -299,7 +299,7 @@ This is the schema for the default views:
 
 
 
-## Create main table and wiews
+## Create main table and views
 Run this query to create the views and the main table.
 
 ``` sql
