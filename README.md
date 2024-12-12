@@ -303,20 +303,39 @@ This is the schema for the default views:
 Run this query to create the views and the main table.
 
 ``` sql
-# NAMELESS ANALYTICS 
+# NAMELESS ANALYTICS
+
 declare project_name string default 'tom-moretti';  -- Change this according to your project name
 declare dataset_name string default 'nameless_analytics'; -- Change this according to your dataset name
+declare main_table_name string default 'events'; 
+declare dates_table_name string default 'dates';
+declare gtm_performances_procedure_name string default 'gtm_performances';
+declare users_procedure_name string default 'users_view';
+declare sessions_procedure_name string default 'sessions_view';
+declare pages_procedure_name string default 'pages_view';
+declare ec_transactions_procedure_name string default 'ec_transactions_view';
+declare ec_products_procedure_name string default 'ec_products_view';
+declare ec_shopping_stages_closed_funnel_procedure_name string default 'ec_shopping_stages_closed_funnel_view';
+declare ec_shopping_stages_open_funnel_procedure_name string default 'ec_shopping_stages_open_funnel_view';
 
-declare main_table_path string;
-declare users_path string;
-declare sessions_path string;
-declare pages_path string;
-declare ec_transactions_path string;
-declare ec_products_path string;
-declare ec_shopping_stages_closed_funnel_path string;
-declare ec_shopping_stages_open_funnel_path string;
+# -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
+declare main_dataset_path string default CONCAT('`', project_name, '.', dataset_name, '`');
+declare main_table_path string default CONCAT('`', project_name, '.', dataset_name, '.', main_table_name,'`');
+-- declare dates_table_path string default CONCAT('`', project_name, '.', dataset_name, '.', dates_table_name,'`');
+declare gtm_performances_procedure_path default CONCAT('`', project_name, '.', dataset_name, '.', gtm_performances_procedure_name,'`');
+declare users_procedure_path default CONCAT('`', project_name, '.', dataset_name, '.', users_procedure_name,'`');
+declare sessions_procedure_path default CONCAT('`', project_name, '.', dataset_name, '.', sessions_procedure_name,'`');
+declare pages_procedure_path default CONCAT('`', project_name, '.', dataset_name, '.', pages_procedure_name,'`');
+declare ec_transactions_procedure_path default CONCAT('`', project_name, '.', dataset_name, '.', ec_transactions_procedure_name,'`');
+declare ec_products_procedure_path default CONCAT('`', project_name, '.', dataset_name, '.', ec_products_procedure_name,'`');
+declare ec_shopping_stages_closed_funnel_procedure_path default CONCAT('`', project_name, '.', dataset_name, '.', ec_shopping_stages_closed_funnel_procedure_name,'`');
+declare ec_shopping_stages_open_funnel_procedure_path default CONCAT('`', project_name, '.', dataset_name, '.', ec_shopping_stages_open_funnel_procedure_name,'`');
+
+declare main_dataset_sql string;
 declare main_table_sql string;
+declare dates_table_sql string;
+declare gtm_performances_sql string;
 declare users_sql string;
 declare sessions_sql string;
 declare pages_sql string;
@@ -325,27 +344,39 @@ declare ec_products_sql string;
 declare ec_shopping_stages_closed_funnel_sql string;
 declare ec_shopping_stages_open_funnel_sql string;
 
-# ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+# -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
-set main_table_path = CONCAT('`', project_name, '.', dataset_name, '.hits`'); -- Change this if you want modify the default raw data table name
-set users_path = CONCAT('`', project_name, '.', dataset_name, '.users`');
-set sessions_path = CONCAT('`', project_name, '.', dataset_name, '.sessions`');
-set pages_path = CONCAT('`', project_name, '.', dataset_name, '.pages`');
-set ec_transactions_path = CONCAT('`', project_name, '.', dataset_name, '.ec_transactions`');
-set ec_products_path = CONCAT('`', project_name, '.', dataset_name, '.ec_products`');
-set ec_shopping_stages_closed_funnel_path = CONCAT('`', project_name, '.', dataset_name, '.ec_shopping_stages_closed_funnel`');
-set ec_shopping_stages_open_funnel_path = CONCAT('`', project_name, '.', dataset_name, '.ec_shopping_stages_open_funnel`');
+# Main dataset
+set main_dataset_sql = format(
+  """
+    create schema if not exists %s
+    options (
+      -- default_kms_key_name = 'KMS_KEY_NAME',
+      -- default_partition_expiration_days = PARTITION_EXPIRATION,
+      -- default_table_expiration_days = TABLE_EXPIRATION,
+      -- max_time_travel_hours = HOURS, // default 168 hours => 7 days 
+      -- storage_billing_model = BILLING_MODEL // Phytical or logical (default)  
+      description = 'Nameless Analytics',
+      location = 'EU'
+    );
+  """
+, main_dataset_path);
 
 
 # Main table
 set main_table_sql = format(
   """
     create table if not exists %s (
-      event_date DATE OPTIONS (description = 'Date of the request'),
-      client_id STRING OPTIONS (description = 'Client id of the user'),
-      session_id STRING OPTIONS (description = 'Session id of the user'),
-      event_name STRING OPTIONS (description = 'Event name of the request'),
-      event_timestamp INT64 OPTIONS (description = 'Insert timestamp of the event'),
+      event_date DATE NOT NULL OPTIONS (description = 'Date of the request'),
+      event_datetime DATETIME OPTIONS (description = 'Datetime of the request'),
+      event_timestamp INT64 NOT NULL OPTIONS (description = 'Insert timestamp of the event'),
+      received_event_timestamp INT64 OPTIONS (description = 'Received timestamp of the event'),
+      from_measurement_protocol STRING NOT NULL OPTIONS (description = 'Yes if the hit comes from measurement protocol, No if the hit comes from browser'),
+      content_length INT64 NOT NULL OPTIONS (description = 'Size of the message body, in bytes'),
+      client_id STRING NOT NULL OPTIONS (description = 'Client id of the user'),
+      user_id STRING OPTIONS (description = 'User id of the user'),
+      session_id STRING NOT NULL OPTIONS (description = 'Session id of the user'),
+      event_name STRING NOT NULL OPTIONS (description = 'Event name of the request'),
       event_data ARRAY<
         STRUCT<
           name STRING OPTIONS (description = 'Event data parameter name'),
@@ -360,27 +391,154 @@ set main_table_sql = format(
       consent_data ARRAY<
         STRUCT<
           name STRING OPTIONS (description = 'Consent data parameter name'),
-          value BOOL OPTIONS (description = 'Consent data parameter boolean value')
+          value STRUCT<
+            string STRING OPTIONS (description = 'Consent data parameter string value'),
+            bool BOOL OPTIONS (description = 'Consent data parameter boolean value')
+          > OPTIONS (description = 'Consent data parameter value name')
         >
       > OPTIONS (description = 'Consent data')
     )
     PARTITION BY event_date
     CLUSTER BY client_id, session_id, event_name
-    OPTIONS (description = 'Nameless Analytics | Main table')
+    OPTIONS (description = 'Nameless Analytics | Main table');
   """
 , main_table_path);
+
+
+# Dates table
+# set dates_table_sql = format(
+#   """
+#     create table if not exists %s (
+#       date DATE NOT NULL OPTIONS(description = "The date value"),
+#       year INT64 OPTIONS(description = "Year extracted from the date"),
+#       quarter INT64 OPTIONS(description = "Quarter of the year (1-4) extracted from the date"),
+#       month_number INT64 OPTIONS(description = "Month number of the year (1-12) extracted from the date"),
+#       month_name STRING OPTIONS(description = "Full name of the month (e.g., January) extracted from the date"),
+#       week_number_sunday INT64 OPTIONS(description = "Week number of the year, starting on Sunday"),
+#       week_number_monday INT64 OPTIONS(description = "Week number of the year, starting on Monday"),  
+#       day_number INT64 OPTIONS(description = "Day number of the month (1-31)"),
+#       day_name STRING OPTIONS(description = "Full name of the day of the week (e.g., Monday)"),
+#       day_of_week_number INT64 OPTIONS(description = "Day of the week number (1 for Monday, 7 for Sunday)"),
+#       is_weekend BOOL OPTIONS(description = "True if the day is Saturday or Sunday")
+#     ) PARTITION BY DATE_TRUNC(date, year)
+#       CLUSTER BY month_name, day_name
+#       OPTIONS (description = 'Nameless Analytics | Dates utility table')
+#       AS
+#     (
+#       SELECT 
+#         date,
+#         EXTRACT(YEAR FROM date) AS year,
+#         EXTRACT(QUARTER FROM date) AS quarter,
+#         EXTRACT(MONTH FROM date) AS month_number,
+#         CASE EXTRACT(MONTH FROM date)
+#           WHEN 1 THEN 'January'
+#           WHEN 2 THEN 'February'
+#           WHEN 3 THEN 'March'
+#           WHEN 4 THEN 'April'
+#           WHEN 5 THEN 'May'
+#           WHEN 6 THEN 'June'
+#           WHEN 7 THEN 'July'
+#           WHEN 8 THEN 'August'
+#           WHEN 9 THEN 'September'
+#           WHEN 10 THEN 'October'
+#           WHEN 11 THEN 'November'
+#           WHEN 12 THEN 'December'
+#         END AS month_name,
+#         EXTRACT(WEEK(SUNDAY) FROM date) AS week_number_sunday, -- Week starting on Sunday
+#         EXTRACT(WEEK(MONDAY) FROM date) AS week_number_monday, -- Week starting on Monday
+#         EXTRACT(DAY FROM date) AS day_number,
+#         CASE EXTRACT(DAYOFWEEK FROM date)
+#           WHEN 1 THEN 'Sunday'
+#           WHEN 2 THEN 'Monday'
+#           WHEN 3 THEN 'Tuesday'
+#           WHEN 4 THEN 'Wednesday'
+#           WHEN 5 THEN 'Thursday'
+#           WHEN 6 THEN 'Friday'
+#           WHEN 7 THEN 'Saturday'
+#         END AS day_name, 
+#         EXTRACT(DAYOFWEEK FROM date) AS day_of_week_number,
+#         IF(EXTRACT(DAYOFWEEK FROM date) IN (1, 7), TRUE, FALSE) AS is_weekend
+#       FROM UNNEST(GENERATE_DATE_ARRAY('2020-01-01', '2050-12-31', INTERVAL 1 DAY)) AS date
+#     ); 
+#   """
+# , dates_table_path);
+
+
+# GTM performances view
+set gtm_performances_sql = format(
+  """
+    create or replace table function %s (start_date DATE, end_date DATE) as (
+      with db as (
+        SELECT 
+          event_date,
+          event_datetime,
+          event_timestamp,
+          received_event_timestamp,
+          received_event_timestamp - event_timestamp AS delay_in_milliseconds,
+          from_measurement_protocol,
+          content_length,
+          client_id,
+          -- user_id,
+          session_id,
+          (SELECT value.string FROM UNNEST(event_data) WHERE name = 'page_hostname') as hostname,
+          (SELECT value.string FROM UNNEST(event_data) WHERE name = 'ss_hostname') as ss_hostname,
+          (SELECT value.string FROM UNNEST(event_data) WHERE name = 'cs_container_id') as cs_container_id,
+          (SELECT value.string FROM UNNEST(event_data) WHERE name = 'ss_container_id') as ss_container_id,
+          event_name,
+          (SELECT value.string FROM UNNEST(event_data) WHERE name = 'event_id') as event_id,
+          name,
+          value.string as string_value,
+          value.int as int_value,
+          value.float as float_value,
+          if(TO_JSON_STRING(value.json) != 'null', TO_JSON_STRING(value.json), null) as json_value,
+        FROM %s
+        cross join unnest(event_data)
+      )
+
+      select 
+        event_date,
+        event_datetime,
+        event_timestamp,
+        received_event_timestamp,
+        delay_in_milliseconds,
+        delay_in_milliseconds / 1000 as delay_in_seconds,
+        from_measurement_protocol,
+        content_length,
+        client_id,
+        -- user_id,
+        session_id,
+        hostname,
+        ss_hostname,
+        cs_container_id,
+        ss_container_id,
+        rank() over (partition by client_id, session_id order by event_timestamp asc) as hit_number,
+        event_name,
+        event_id,
+        array_agg(
+          struct(
+            name,
+            string_value,
+            int_value,
+            float_value,
+            json_value
+          )
+        ) as event_data
+      from db
+      group by all
+    );
+  """
+, gtm_performances_procedure_path, main_table_path);
 
 
 # Users view
 set users_sql = format(
   """
-    create view if not exists %s as (
+    create or replace table function %s (start_date DATE, end_date DATE) as (
       with user_data_raw as ( 
         select   
           -- USER DATA
           client_id,
           --- (select value.string from unnest (user_data) where name = 'user_id') as user_id,
-          --- (select value.string from unnest (user_data) where name = 'customer_id') as customer_id,
 
           first_value(event_timestamp) over (partition by client_id order by event_timestamp asc) as min_user_timestamp,
           first_value(event_timestamp) over (partition by client_id order by event_timestamp desc) as max_user_timestamp,
@@ -395,6 +553,7 @@ set users_sql = format(
 
           -- EVENT DATA
           event_name,
+          event_date,
           event_timestamp,
 
           -- ECOMMERCE DATA
@@ -405,11 +564,12 @@ set users_sql = format(
 
       user_data_product_def as (
         select
+          event_date,
           client_id,
           -- user_id,
-          -- customer_id,
           user_channel_grouping,
           case
+            when user_source = 'tagassistant.google.com' then user_source
             when net.reg_domain(user_source) is not null then net.reg_domain(user_source)
             else user_source
           end as user_source,
@@ -448,12 +608,12 @@ set users_sql = format(
         from user_data_raw
           left join unnest(items_data) as items
       ),
-      
+        
       user_data_session_def as (
         select 
+          event_date,
           client_id,
           -- user_id,
-          -- customer_id,
           user_channel_grouping,
           user_source,
           user_campaign,
@@ -465,8 +625,8 @@ set users_sql = format(
           max_session_timestamp,
           TIMESTAMP_DIFF(max_session_timestamp, min_session_timestamp, MILLISECOND) / 1000 as session_duration_sec,
           countif(event_name = 'page_view') as page_view,
-          count(distinct purchase) as purchase,
-          count(distinct refund) as refund,
+          countif(event_name = "purchase") as purchase,
+          countif(event_name = "refund") as refund,
           sum(item_revenue_purchased) as item_revenue_purchased,
           sum(item_revenue_refunded) as item_revenue_refunded,
           sum(item_quantity_purchased) as item_quantity_purchased,
@@ -477,9 +637,8 @@ set users_sql = format(
 
       user_data_def as(
         select 
+          event_date,    
           client_id,
-          -- user_id,
-          -- customer_id,
           case 
             when session_number = 1 then client_id
             else null
@@ -488,6 +647,7 @@ set users_sql = format(
             when session_number > 1 then client_id
             else null
           end as returning_user,
+          -- user_id,
           user_channel_grouping,
           user_source,
           user_campaign,
@@ -500,10 +660,6 @@ set users_sql = format(
           case 
             when sum(page_view) >= 2 and (avg(session_duration_sec) >= 10 or sum(purchase) >= 1) then 1
             else 0
-          end as engaged_session,
-          case 
-          when sum(page_view) >= 2 and (avg(session_duration_sec) >= 10 or sum(purchase) >= 1) then 1
-          else 0
           end as engaged_session,
           sum(page_view) as page_view,
           sum(purchase) as purchase,
@@ -519,44 +675,22 @@ set users_sql = format(
 
       def as (
         select 
+          event_date, 
           client_id,
+          new_user,
+          max(new_user) over (partition by client_id) as new_user_client_id,
+          returning_user,
+          max(returning_user) over (partition by client_id) as returning_user_client_id,
           -- user_id,
-          -- customer_id,
           user_channel_grouping,
           user_source,
           user_campaign,
-          new_user,
-          max(new_user) over (partition by client_id) as new_user_id,
-          returning_user,
-          max(returning_user) over (partition by client_id) as returning_user_id,
-          case 
-            when sum(purchase) = 0 then 'Not customer'
-            when sum(purchase) >= 1 then 'Customer'
-          end as is_customer,
-          case 
-            when sum(purchase) = 0 then 1
-            else null
-          end as not_customers,
-          case 
-            when sum(purchase) >= 1 then 1
-            else null
-          end as customers,
-          case 
-            when sum(purchase) = 1 then 1
-            else null
-          end as new_customers,
-          case 
-            when sum(purchase) > 1 then 1
-            else null
-          end as returning_customers,
           min_user_timestamp,
           max(min_user_timestamp) over (partition by client_id) as max_min_user_timestamp,
           max_user_timestamp,
           max(max_user_timestamp) over (partition by client_id) as max_max_user_timestamp,
-
           days_since_first_visit,
           max(days_since_first_visit) over (partition by client_id) as max_days_since_first_visit,
-
           days_from_last_visit,
           max(days_from_last_visit) over (partition by client_id) as max_days_from_last_visit,
           count(distinct session_id) as sessions,
@@ -573,28 +707,43 @@ set users_sql = format(
       )
 
       select 
+        event_date as user_acquisition_date,
         client_id,
+        max(new_user_client_id) as new_user_client_id,
+        max(returning_user_client_id) as returning_user_client_id,
         -- user_id,
-        -- customer_id,
         min_user_timestamp,
         max_user_timestamp,
-        max(max_days_since_first_visit) as max_days_since_first_visit,
-        max(max_days_from_last_visit) as max_days_from_last_visit,
+        max(max_days_since_first_visit) as days_since_first_visit,
+        max(max_days_from_last_visit) as days_from_last_visit,
         user_channel_grouping,
         user_source,
         user_campaign,
-        max(new_user_id) as new_user_id,
-        max(returning_user_id) as returning_user_id,
-        is_customer,
+        case 
+          when sum(purchase) = 0 then 'Not customer'
+          when sum(purchase) >= 1 then 'Customer'
+        end as is_customer,
         case 
           when sum(purchase) = 1 then 'New customer'
           when sum(purchase) > 1 then 'Returning customer'
           else 'Not customer'
         end as customer_type,
-        max(not_customers) as not_customers,
-        max(customers) as customers,
-        max(new_customers) as new_customers,
-        max(returning_customers) as returning_customers,
+          case 
+            when sum(purchase) = 0 then 1
+            else null
+          end as not_customers,
+          case 
+            when sum(purchase) >= 1 then 1
+            else null
+          end as customers,
+          case 
+            when sum(purchase) = 1 then 1
+            else null
+          end as new_customers,
+          case 
+            when sum(purchase) > 1 then 1
+            else null
+          end as returning_customers,
         sum(sessions) as sessions,
         sum(page_view) as page_view,
         sum(purchase) as purchase,
@@ -604,24 +753,23 @@ set users_sql = format(
         sum(purchase_revenue) as purchase_revenue,
         sum(refund_revenue) as refund_revenue,
         sum(revenue_net_refund) as revenue_net_refund
-        -- RFM da fare
+        -- TO DO: RFM
       from def
       group by all
     );
   """
-, users_path, main_table_path);
+, users_procedure_path, main_table_path);
 
 
 # Sessions view
 set sessions_sql = format(
   """
-    create view if not exists %s as (
+    create or replace table function %s (start_date DATE, end_date DATE) as (
       with session_data_raw as ( 
         select
           -- USER DATA
-          client_id,   
+          client_id,
           --- (select value.string from unnest (event_data) where name = 'user_id') as user_id,
-          --- (select value.string from unnest (user_data) where name = 'customer_id') as customer_id,
 
           -- SESSION DATA
           session_id, 
@@ -630,6 +778,7 @@ set sessions_sql = format(
           first_value((select value.string from unnest (event_data) where name = 'channel_grouping')) over (partition by session_id order by event_timestamp) as session_channel_grouping,
           first_value((select value.string from unnest (event_data) where name = 'source')) over (partition by session_id order by event_timestamp) as session_source,
           first_value((select value.string from unnest (event_data) where name = 'campaign')) over (partition by session_id order by event_timestamp) as session_campaign,
+          (select value.string from unnest (event_data) where name = 'page_location'),
           first_value((select value.string from unnest (event_data) where name = 'page_location')) over (partition by session_id order by event_timestamp) as session_landing_page_location,
           first_value((select value.string from unnest (event_data) where name = 'page_title')) over (partition by session_id order by event_timestamp) as session_landing_page_title,
           first_value((select value.string from unnest (event_data) where name = 'page_hostname')) over (partition by session_id order by event_timestamp) as session_hostname,
@@ -653,13 +802,13 @@ set sessions_sql = format(
           event_date,
           client_id,
           -- user_id,
-          -- customer_id,
           dense_rank() over (partition by client_id order by min_session_timestamp asc) as session_number,
           session_id,
           min_session_timestamp,
           max_session_timestamp,
           session_channel_grouping,
           case
+            when session_source = 'tagassistant.google.com' then session_source
             when net.reg_domain(session_source) is not null then net.reg_domain(session_source)
             else session_source
           end as session_source,
@@ -675,27 +824,27 @@ set sessions_sql = format(
           event_timestamp,
           case
             when event_name = 'purchase' then ifnull(cast(json_value(transaction_data.value) as float64), 0.0)
-            else 0.0
+            else null
           end as transaction_value,
           case
             when event_name = 'purchase' then ifnull(cast(json_value(transaction_data.shipping) as float64), 0.0)
-            else 0.0
+            else null
           end as transaction_shipping,
           case
             when event_name = 'purchase' then ifnull(cast(json_value(transaction_data.tax) as float64), 0.0)
-            else 0.0
+            else null
           end as transaction_tax,
           case
             when event_name = 'refund' then -ifnull(cast(json_value(transaction_data.value) as float64), 0.0)
-            else 0.0
+            else null
           end as refund_value,
           case
             when event_name = 'refund' then -ifnull(cast(json_value(transaction_data.shipping) as float64), 0.0)
-            else 0.0
+            else null
           end as refund_shipping,
           case
             when event_name = 'refund' then -ifnull(cast(json_value(transaction_data.tax) as float64), 0.0)
-            else 0.0
+            else null
           end as refund_tax,
         from session_data_raw
       ),
@@ -705,7 +854,6 @@ set sessions_sql = format(
           event_date,
           client_id,
           -- user_id,
-          -- customer_id,
           case 
             when session_number = 1 then 'new_user'
             when session_number > 1 then 'returning_user'
@@ -760,7 +908,6 @@ set sessions_sql = format(
         event_date,
         client_id,
         -- user_id,
-        -- customer_id,
         user_type,
         new_user,
         returning_user,
@@ -806,25 +953,24 @@ set sessions_sql = format(
         refund_revenue,
         refund_shipping,
         refund_tax,
-        purchase_revenue + refund_revenue as revenue_net_refund,
-        purchase_shipping + refund_shipping as shipping_net_refund,
-        purchase_tax + refund_tax as tax_net_refund,
+        ifnull(purchase_revenue, 0) + ifnull(refund_revenue, 0) as revenue_net_refund,
+        ifnull(purchase_shipping, 0) + ifnull(refund_shipping, 0) as shipping_net_refund,
+        ifnull(purchase_tax, 0) + ifnull(refund_tax, 0) as tax_net_refund,
       from session_data
     );
   """
-, sessions_path, main_table_path);
+, sessions_procedure_path, main_table_path);
 
 
 # Pages view
 set pages_sql = format(
   """
-    create view if not exists %s as (
+    create or replace table function %s (start_date DATE, end_date DATE) as (
       with page_data_raw as ( 
         select
           -- USER DATA
           client_id,
           --- (select value.string from unnest (user_data) where name = 'user_id') as user_id,
-          --- (select value.string from unnest (user_data) where name = 'customer_id') as customer_id,
 
           -- SESSION DATA
           session_id, 
@@ -843,29 +989,34 @@ set pages_sql = format(
 
           -- EVENT DATA
           event_name,
+          (select value.string from unnest (event_data) where name = 'event_type') as event_type,
           event_date,
           event_timestamp,
+          (select value.string from unnest (event_data) where name = 'page_id') as page_id,
           first_value(event_timestamp) over (partition by (select value.string from unnest (event_data) where name = 'page_id') order by event_timestamp asc) as min_page_timestamp,
           first_value(event_timestamp) over (partition by (select value.string from unnest (event_data) where name = 'page_id') order by event_timestamp desc) as max_page_timestamp,
-          (select value.string from unnest (event_data) where name = 'page_id') as page_id,
           (select value.string from unnest (event_data) where name = 'page_location') as page_location,
           (select value.string from unnest (event_data) where name = 'page_hostname') as page_hostname,
           (select value.string from unnest (event_data) where name = 'page_title') as page_title,
           (select value.string from unnest (event_data) where name = 'content_group') as content_group,
-        from %s 
+          (select value.int from unnest (event_data) where name = 'time_to_dom_interactive') as time_to_dom_interactive,
+          (select value.int from unnest (event_data) where name = 'page_render_time') as page_render_time,
+          (select value.int from unnest (event_data) where name = 'time_to_dom_complete') as time_to_dom_complete,
+          (select value.int from unnest (event_data) where name = 'total_page_load_time') as total_page_load_time
+        from %s
       ),
 
-      page_data_def as(
+      page_data as(
         select 
           event_date,
           client_id,
           -- user_id,
-          -- customer_id,
           dense_rank() over (partition by client_id order by min_session_timestamp asc) as session_number,
           session_id,
           min_session_timestamp,
           session_channel_grouping,
           case
+            when session_source = 'tagassistant.google.com' then session_source
             when net.reg_domain(session_source) is not null then net.reg_domain(session_source)
             else session_source
           end as session_source,
@@ -878,8 +1029,8 @@ set pages_sql = format(
           session_browser_name,
           session_browser_language,
           event_name,
+          event_type,
           event_timestamp,
-          dense_rank() over (partition by session_id order by event_timestamp asc) as page_view_number,
           page_id,
           page_location,
           page_hostname,
@@ -887,26 +1038,85 @@ set pages_sql = format(
           content_group,
           min_page_timestamp,
           max_page_timestamp,
+          time_to_dom_interactive,
+          page_render_time,
+          time_to_dom_complete,
+          total_page_load_time,
+          countif(event_name = 'page_view') as page_view,
+          countif(event_name = 'page_load_time') as page_load_time,
+          countif(event_name = 'click_contact_button') as click_contact_button,
+          countif(event_name = 'purchase') as purchase
         from page_data_raw
+        group by all
+      ),
+
+      page_data_def as (
+        select 
+          event_date,
+          client_id,
+          -- user_id,
+          case 
+            when session_number = 1 then 'new_user'
+            when session_number > 1 then 'returning_user'
+          end as user_type,
+          case 
+            when session_number = 1 then client_id
+            else null
+          end as new_user,
+          case 
+            when session_number > 1 then client_id
+            else null
+          end as returning_user,
+          session_number,
+          session_id,
+          min_session_timestamp,
+          session_channel_grouping,
+          session_source,  
+          session_campaign,
+          session_device_type,
+          session_country,
+          session_browser_name,
+          session_browser_language,
+          session_landing_page_location,
+          session_landing_page_title,
+          session_hostname,
+          dense_rank() over (partition by session_id order by event_timestamp asc) as page_view_number,
+          event_name,
+          event_type,
+          event_timestamp,
+          page_id,
+          page_location,
+          page_hostname,
+          page_title,
+          content_group,
+          (max_page_timestamp - min_page_timestamp) / 1000 as time_on_page_sec,
+          time_to_dom_interactive,
+          max(time_to_dom_interactive) over (partition by page_id) as max_time_to_dom_interactive,
+          page_render_time,
+          max(page_render_time) over (partition by page_id) as max_page_render_time,
+          time_to_dom_complete,
+          max(time_to_dom_complete) over (partition by page_id) as max_time_to_dom_complete,
+          total_page_load_time,
+          max(total_page_load_time) over (partition by page_id) as max_total_page_load_time,
+          page_view,
+          max(page_view) over (partition by page_id) as max_page_view,
+          page_load_time,
+          max(page_load_time) over(partition by page_id) as max_page_load_time,
+          purchase,
+          max(purchase) over (partition by page_id) as max_purchase,
+          click_contact_button,
+          max(click_contact_button) over (partition by page_id) as max_click_contact_button
+        from page_data
+        group by all
       )
 
       select 
         event_date,
         client_id,
         -- user_id,
-        -- customer_id,
-        case 
-          when session_number = 1 then 'new_user'
-          when session_number > 1 then 'returning_user'
-        end as user_type,
-        case 
-          when session_number = 1 then client_id
-          else null
-        end as new_user,
-        case 
-          when session_number > 1 then client_id
-          else null
-        end as returning_user,
+        user_type,
+        new_user,
+        returning_user,
         session_number,
         session_id,
         min_session_timestamp,
@@ -921,30 +1131,39 @@ set pages_sql = format(
         session_landing_page_title,
         session_hostname,
         page_view_number,
+        event_type,
+        event_timestamp,
         page_id,
         page_location,
         page_hostname,
         page_title,
         content_group,
-        (max_page_timestamp - min_page_timestamp) / 1000 as time_on_page_sec,
-        countif(event_name = 'page_view') as page_view
-      from page_data_def
-      group by all
+        time_on_page_sec,
+        max_time_to_dom_interactive / 1000 as time_to_dom_interactive_sec,
+        max_page_render_time / 1000 as page_render_time_sec,
+        max_time_to_dom_complete / 1000 as time_to_dom_complete_sec,
+        max_total_page_load_time / 1000 as total_page_load_time_sec,
+        max_page_view as page_view,
+        -- max_page_load_time as page_load_time,
+        max_purchase as purchase,
+        max_click_contact_button as click_contact_button,
+      from page_data_def 
+        where true 
+        and event_name = 'page_view'
     );
   """
-, pages_path, main_table_path);
+, pages_procedure_path, main_table_path);
 
 
 # Ecommerce - Transactions
 set ec_transactions_sql = format(
   """
-    create view if not exists %s as (
+    create or replace table function %s (start_date DATE, end_date DATE) as (
       with ecommerce_data_raw as ( 
         select
           -- USER DATA
           client_id,
           --- (select value.string from unnest (user_data) where name = 'user_id') as user_id,
-          --- (select value.string from unnest (user_data) where name = 'customer_id') as customer_id,
 
           -- SESSION DATA
           session_id, 
@@ -974,12 +1193,12 @@ set ec_transactions_sql = format(
           event_date,
           client_id, 
           -- user_id,
-          -- customer_id,
           dense_rank() over (partition by client_id order by min_session_timestamp asc) as session_number,
           session_id,
           min_session_timestamp,
           session_channel_grouping,
           case
+            when session_source = 'tagassistant.google.com' then session_source
             when net.reg_domain(session_source) is not null then net.reg_domain(session_source)
             else session_source
           end as session_source,
@@ -997,27 +1216,27 @@ set ec_transactions_sql = format(
           json_value(transaction_data.coupon) as transaction_coupon,
           case
             when event_name = 'purchase' then ifnull(cast(json_value(transaction_data.value) as float64), 0.0)
-            else 0.0
+            else null
           end as purchase_revenue,
           case
             when event_name = 'purchase' then ifnull(cast(json_value(transaction_data.shipping) as float64), 0.0)
-            else 0.0
+            else null
           end as purchase_shipping,
           case
             when event_name = 'purchase' then ifnull(cast(json_value(transaction_data.tax) as float64), 0.0)
-            else 0.0
+            else null
           end as purchase_tax,
           case
-            when event_name = 'refund' then -ifnull(cast(json_value(transaction_data.value) as float64), 0.0)
-            else 0.0
+            when event_name = 'refund' then ifnull(cast(json_value(transaction_data.value) as float64), 0.0)
+            else null
           end as refund_revenue,
           case
-            when event_name = 'refund' then -ifnull(cast(json_value(transaction_data.shipping) as float64), 0.0)
-            else 0.0
+            when event_name = 'refund' then ifnull(cast(json_value(transaction_data.shipping) as float64), 0.0)
+            else null
           end as refund_shipping,
           case
-            when event_name = 'refund' then -ifnull(cast(json_value(transaction_data.tax) as float64), 0.0)
-            else 0.0
+            when event_name = 'refund' then ifnull(cast(json_value(transaction_data.tax) as float64), 0.0)
+            else null
           end as refund_tax,
         from ecommerce_data_raw
       ),
@@ -1027,7 +1246,6 @@ set ec_transactions_sql = format(
           event_date,
           client_id, 
           -- user_id,
-          -- customer_id,
           case 
             when session_number = 1 then 'new_user'
             when session_number > 1 then 'returning_user'
@@ -1075,7 +1293,6 @@ set ec_transactions_sql = format(
         event_date,
         client_id,
         -- user_id,
-        -- customer_id,
         user_type,
         new_user,
         returning_user,
@@ -1103,25 +1320,24 @@ set ec_transactions_sql = format(
         refund_shipping,
         refund_tax,
         purchase - refund as purchase_net_refund,
-        purchase_revenue + refund_revenue as revenue_net_refund,
-        purchase_shipping + refund_shipping as shipping_net_refund,
-        purchase_tax + refund_tax as tax_net_refund,
+        ifnull(purchase_revenue, 0) - ifnull(refund_revenue, 0) as revenue_net_refund,
+        ifnull(purchase_shipping, 0) + ifnull(refund_shipping, 0) as shipping_net_refund,
+        ifnull(purchase_tax, 0) + ifnull(refund_tax, 0) as tax_net_refund,
       from ecommerce_data
     );
   """
-, ec_transactions_path, main_table_path);
+, ec_transactions_procedure_path, main_table_path);
 
 
 # Ecommerce - Products
 set ec_products_sql = format(
   """
-    create view if not exists %s as (
+    create or replace table function %s (start_date DATE, end_date DATE) as (
       with ecommerce_data_raw as ( 
         select
           -- USER DATA
           client_id,
           --- (select value.string from unnest (user_data) where name = 'user_id') as user_id,
-          --- (select value.string from unnest (user_data) where name = 'customer_id') as customer_id,
 
           -- SESSION DATA
           session_id, 
@@ -1157,6 +1373,7 @@ set ec_products_sql = format(
           min_session_timestamp,
           session_channel_grouping,
           case
+            when session_source = 'tagassistant.google.com' then session_source
             when net.reg_domain(session_source) is not null then net.reg_domain(session_source)
             else session_source
           end as session_source,
@@ -1193,31 +1410,31 @@ set ec_products_sql = format(
           cast(json_value(items, '$.price') as float64) as item_price,
           case when 
             event_name = 'purchase' then cast(json_value(items, '$.quantity') as int64)
-            else 0
+            else null
           end as item_quantity_purchased,
           case when 
             event_name ='refund' then cast(json_value(items, '$.quantity') as int64)
-            else 0
+            else null
           end as item_quantity_refunded,
           case when 
             event_name = 'add_to_cart' then cast(json_value(items, '$.quantity') as int64)
-            else 0
+            else null
           end as item_quantity_added_to_cart,
           case when 
             event_name = 'remove_from_cart' then cast(json_value(items, '$.quantity') as int64)
-            else 0
+            else null
           end as item_quantity_removed_from_cart,
           case 
             when event_name = 'purchase' then cast(json_value(items, '$.price') as float64) * cast(json_value(items, '$.quantity') as int64)
-            else 0
+            else null
           end as item_revenue_purchased,
           case 
             when event_name = 'refund' then -cast(json_value(items, '$.price') as float64) * cast(json_value(items, '$.quantity') as int64)
-            else 0
+            else null
           end as item_revenue_refunded,
           case 
             when event_name = 'purchase' then count(distinct json_value(items, '$.item_name'))
-            else 0 
+            else null
           end as item_unique_purchases
         from ecommerce_data_raw
           left join unnest(items_data) as items
@@ -1323,32 +1540,16 @@ set ec_products_sql = format(
         session_country,
         session_browser_name,
         session_browser_language,
-        purchase,
-        refund,
-        transaction_id, 
-        view_promotion,
-        select_promotion,
-        view_item_list,
-        select_item,
-        view_item,
-        add_to_wishlist,
-        add_to_cart,
-        remove_from_cart,
-        view_cart,
-        begin_checkout,
-        add_shipping_info,
-        add_payment_info,
-        list_id,
         list_name,
-        creative_name,
-        creative_slot,
-        promotion_id,
-        promotion_name,
         item_list_id,
         item_list_name,
         item_affiliation,
         item_coupon,
         item_discount,
+        creative_name,
+        creative_slot,
+        promotion_id,
+        promotion_name,
         item_brand,
         item_id,
         item_name,
@@ -1358,32 +1559,46 @@ set ec_products_sql = format(
         item_category_3,
         item_category_4,
         item_category_5,
-        item_price,
-        item_quantity_purchased,
-        item_quantity_refunded,
-        item_quantity_added_to_cart,
-        item_quantity_removed_from_cart,
-        item_purchase_revenue,
-        item_refund_revenue,
-        item_unique_purchases,
-        purchase - refund as purchase_net_refund,
-        item_purchase_revenue + item_refund_revenue as item_revenue_net_refund,
+        sum(view_promotion) as view_promotion,
+        sum(select_promotion) as select_promotion,
+        sum(view_item_list) as view_item_list,
+        sum(select_item) as select_item,
+        sum(view_item) as view_item,
+        sum(add_to_wishlist) as add_to_wishlist,
+        sum(add_to_cart) as add_to_cart,
+        sum(remove_from_cart) as remove_from_cart,
+        sum(view_cart) as view_cart,
+        sum(begin_checkout) as begin_checkout,
+        sum(add_shipping_info) as add_shipping_info,
+        sum(add_payment_info) as add_payment_info,
+        transaction_id, 
+        sum(purchase) as purchase,
+        sum(refund) as refund,
+        sum(item_quantity_purchased) as item_quantity_purchased,
+        sum(item_quantity_refunded) as item_quantity_refunded,
+        sum(item_quantity_added_to_cart) as item_quantity_added_to_cart,
+        sum(item_quantity_removed_from_cart) as item_quantity_removed_from_cart,
+        sum(item_purchase_revenue) as item_purchase_revenue,
+        sum(item_refund_revenue) as item_refund_revenue,
+        sum(item_unique_purchases) as item_unique_purchases,
+        sum(ifnull(item_purchase_revenue, 0) + ifnull(item_refund_revenue, 0)) as item_revenue_net_refund,
+        sum(ifnull(purchase, 0) - ifnull(refund, 0)) as purchase_net_refund,
       from ecommerce_data
+      group by all
     );
   """
-, ec_products_path, main_table_path);
+, ec_products_procedure_path, main_table_path);
 
 
 # Ecommerce: Shopping Stages - Closed funnel
 set ec_shopping_stages_closed_funnel_sql = format(
   """
-    create view if not exists %s as (
+    create or replace table function %s (start_date DATE, end_date DATE) as (
       with shopping_stage_data_raw as ( 
         select
           -- USER DATA
           client_id,
           --- (select value.string from unnest (user_data) where name = 'user_id') as user_id,
-          --- (select value.string from unnest (user_data) where name = 'customer_id') as customer_id,
 
           -- SESSION DATA
           session_id, 
@@ -1414,6 +1629,7 @@ set ec_shopping_stages_closed_funnel_sql = format(
           session_id,
           session_channel_grouping,
           case
+            when session_source = 'tagassistant.google.com' then session_source
             when net.reg_domain(session_source) is not null then net.reg_domain(session_source)
             else session_source
           end as session_source,
@@ -1587,7 +1803,7 @@ set ec_shopping_stages_closed_funnel_sql = format(
           *
         from join_steps
           unpivot((client_id, session_id) for step_name in (
-            (all_sessions_users, all_sessions_sessions) as "0 - All sessions",
+            (all_sessions_users, all_sessions_sessions) as "0 - All",
             (view_item_users, view_item_sessions) as "1 - View item",
             (add_to_cart_users, add_to_cart_sessions) as "2 - Add to cart",
             (begin_checkout_users, begin_checkout_sessions) as "3 - Begin checkout",
@@ -1617,23 +1833,21 @@ set ec_shopping_stages_closed_funnel_sql = format(
           order by event_date, client_id, session_id, session_device_type, session_country, session_browser_language, session_channel_grouping, session_source, session_campaign, step_name
         ) as session_id_next_step
       from steps_pivot
-      where true
       group by all
     );
   """
-, ec_shopping_stages_closed_funnel_path, main_table_path);
+, ec_shopping_stages_closed_funnel_procedure_path, main_table_path);
 
 
 # Ecommerce: Shopping Stages - Open funnel
 set ec_shopping_stages_open_funnel_sql = format(
   """
-    create view if not exists %s as (
+    create or replace table function %s (start_date DATE, end_date DATE) as (
       with shopping_stage_data_raw as ( 
         select
           -- USER DATA
           client_id,
           --- (select value.string from unnest (user_data) where name = 'user_id') as user_id,
-          --- (select value.string from unnest (user_data) where name = 'customer_id') as customer_id,
 
           -- SESSION DATA
           session_id, 
@@ -1664,6 +1878,7 @@ set ec_shopping_stages_open_funnel_sql = format(
           session_id,
           session_channel_grouping,
           case
+            when session_source = 'tagassistant.google.com' then session_source
             when net.reg_domain(session_source) is not null then net.reg_domain(session_source)
             else session_source
           end as session_source,
@@ -1930,14 +2145,16 @@ set ec_shopping_stages_open_funnel_sql = format(
       from union_steps_def
     );
   """
-, ec_shopping_stages_open_funnel_path, main_table_path);
+, ec_shopping_stages_open_funnel_procedure_path, main_table_path);
 
+# -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
-# ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+# Create tables 
 
-# Create  tables 
-
+execute immediate main_dataset_sql;
 execute immediate main_table_sql;
+-- execute immediate dates_table_sql;
+execute immediate gtm_performances_sql;
 execute immediate users_sql;
 execute immediate sessions_sql;
 execute immediate pages_sql;
