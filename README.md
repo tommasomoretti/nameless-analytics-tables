@@ -2,7 +2,7 @@
 
 ## Main table schema
 
-This is the schema of the raw data main table. You have to create it manually before starting stream events. 
+This is the schema of the raw data main table. Create it manually before starting stream events. 
 
 It's a partitioned table by event_date, clustered by client_id, session_id and event_name.  
 
