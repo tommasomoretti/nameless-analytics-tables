@@ -5,6 +5,8 @@
 # Nameless Analytics tables and views
 The Nameless Analytics Tables is a set of tables in BigQuery where [Nameless_Analytics Server-side client tag](https://github.com/tommasomoretti/nameless-analytics-server-side-client-tag) or [Nameless_Analytics Data Loader](https://github.com/tommasomoretti/nameless-analytics-data-loader) inserts event data.
 
+For an overview of how Nameless Analytics works start from here.
+
 Start from here:
 - [Main table schema](#main-table-schema)
 - [Create main tables](#create-main-tables)
