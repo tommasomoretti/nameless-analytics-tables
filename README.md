@@ -14,6 +14,7 @@ Start from here:
 - [Create main tables](#create-main-tables)
 
 
+
 ## Main table schema
 
 This is the schema of the raw data main table. Create it manually before starting stream events. 
@@ -39,6 +40,14 @@ It's a partitioned table by event_date, clustered by client_id, session_id and e
 | consent_data.value      | NULLABLE | BOOLEAN | Consent data parameter boolean value    |
 
 To create the main table and the default views, see [Create main tables](#create-main-tables)
+
+
+
+## Dates table schema
+
+
+
+## Data Loader logs table
 
 
 
