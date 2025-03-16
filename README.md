@@ -2,13 +2,15 @@
 
 ---
 
-# Nameless Analytics tables and views
+# Nameless Analytics tables
 The Nameless Analytics Tables is a set of tables in BigQuery where [Nameless_Analytics Server-side client tag](https://github.com/tommasomoretti/nameless-analytics-server-side-client-tag) or [Nameless_Analytics Data Loader](https://github.com/tommasomoretti/nameless-analytics-data-loader) inserts event data.
 
 For an overview of how Nameless Analytics works [start from here](https://github.com/tommasomoretti/nameless-analytics).
 
 Start from here:
 - [Main table schema](#main-table-schema)
+- [Dates table schema](#dates-table-schema)
+- [Data Loader logs table](#data-loader-logs-table)
 - [Create main tables](#create-main-tables)
 
 
@@ -36,7 +38,7 @@ It's a partitioned table by event_date, clustered by client_id, session_id and e
 | consent_data.name       | NULLABLE | STRING  | Consent data parameter name             |
 | consent_data.value      | NULLABLE | BOOLEAN | Consent data parameter boolean value    |
 
-To create the main table and the default views, see [Create main table and wiews]()
+To create the main table and the default views, see [Create main tables](#create-main-tables)
 
 
 
