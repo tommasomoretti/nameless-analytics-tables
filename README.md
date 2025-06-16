@@ -6,7 +6,7 @@
 ---
 
 # Tables
-The Nameless Analytics Tables is a set of tables in BigQuery where [Nameless_Analytics Server-side client tag](https://github.com/tommasomoretti/nameless-analytics-server-side-client-tag/), [Nameless_Analytics Streaming protocol](https://github.com/tommasomoretti/nameless-analytics-streaming-protocol/)  and [Nameless_Analytics Data loader](https://github.com/tommasomoretti/nameless-analytics-batch-data-loader/) inserts event data.
+The Nameless Analytics Tables is a set of tables in BigQuery where users, sessions and events data are stored.
 
 For an overview of how Nameless Analytics works [start from here](https://github.com/tommasomoretti/nameless-analytics/).
 
@@ -14,8 +14,8 @@ Start from here:
 - Tables
   - [Main table](#main-table)
   - [User and sessions](#user-and-sessions)
+  - [Batch data loader logs](#data-loader-logs)
   - [Dates table](#dates-table)
-  - [Batch data Loader logs](#data-loader-logs)
 - Table functions
   - [Users raw latest](#users-raw-latest)
   - [Users](#users)
@@ -35,19 +35,19 @@ Start from here:
 This is the schema of the raw data main table. It's a partitioned table by event_date, clustered by client_id, session_id and event_name.
 
 
-### Dates table
+### Main table
 Lorem ipsum
-
-
-### Batch data loader logs
-Lorem ipsum 
 
 
 ### User and sessions
+Lorem ipsum 
+
+
+### Batch data loader logs
 Lorem ipsum
 
 
-### Create main tables and table functions
+### Dates table
 Lorem ipsum 
 
 
