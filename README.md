@@ -35,7 +35,16 @@ Start from here:
 This is the schema of the raw data main table. It's a partitioned table by event_date, clustered by client_id, session_id and event_name.
 
 ```sql
-
+create schema if not exists %s
+options (
+  -- default_kms_key_name = 'KMS_KEY_NAME',
+  -- default_partition_expiration_days = PARTITION_EXPIRATION,
+  -- default_table_expiration_days = TABLE_EXPIRATION,
+  -- max_time_travel_hours = HOURS, // default 168 hours => 7 days 
+  -- storage_billing_model = BILLING_MODEL // Phytical or logical (default)  
+  description = 'Nameless Analytics',
+  location = '%s'
+);
 ```
 
 
@@ -74,7 +83,7 @@ Lorem ipsum
 
 ```sql
 CREATE OR REPLACE TABLE FUNCTION `tom-moretti.nameless_analytics.users_raw_latest`(start_date DATE, end_date DATE, user_session_scope_param STRING) AS (
-with users_raw as (
+  with users_raw as (
     select
       document_name,
       document_id,
@@ -151,7 +160,7 @@ Lorem ipsum
 
 ```sql
 CREATE OR REPLACE TABLE FUNCTION `tom-moretti.nameless_analytics.users`(start_date DATE, end_date DATE) AS (
-with user_data_raw as ( 
+  with user_data_raw as ( 
     select   
       -- USER DATA
       user_data.user_date,
@@ -458,7 +467,7 @@ Lorem ipsum
 
 ```sql
 CREATE OR REPLACE TABLE FUNCTION `tom-moretti.nameless_analytics.sessions`(start_date DATE, end_date DATE) AS (
-with session_data_raw as ( 
+  with session_data_raw as ( 
     select
       -- USER DATA
       user_data.user_date,
@@ -831,7 +840,7 @@ Lorem ipsum
 
 ```sql
 CREATE OR REPLACE TABLE FUNCTION `tom-moretti.nameless_analytics.pages`(start_date DATE, end_date DATE) AS (
-with page_data_raw as ( 
+  with page_data_raw as ( 
     select
       -- USER DATA
       user_data.user_date,
@@ -1033,7 +1042,7 @@ Lorem ipsum
 
 ```sql
 CREATE OR REPLACE TABLE FUNCTION `tom-moretti.nameless_analytics.ec_transactions`(start_date DATE, end_date DATE) AS (
-with transaction_data_raw as ( 
+  with transaction_data_raw as ( 
     select
       -- USER DATA
       user_data.user_date,
@@ -1293,7 +1302,7 @@ Lorem ipsum
 
 ```sql
 CREATE OR REPLACE TABLE FUNCTION `tom-moretti.nameless_analytics.ec_products`(start_date DATE, end_date DATE) AS (
-with product_data_raw as ( 
+  with product_data_raw as ( 
     select
       -- USER DATA
       user_data.user_date,
@@ -1633,7 +1642,7 @@ Lorem ipsum
 
 ```sql
 CREATE OR REPLACE TABLE FUNCTION `tom-moretti.nameless_analytics.ec_shopping_stages_open_funnel`(start_date DATE, end_date DATE) AS (
-with shopping_stage_data_raw as ( 
+  with shopping_stage_data_raw as ( 
         select
           -- USER DATA
           client_id,
@@ -1975,7 +1984,7 @@ Lorem ipsum
 
 ```sql
 CREATE OR REPLACE TABLE FUNCTION `tom-moretti.nameless_analytics.ec_shopping_stages_closed_funnel`(start_date DATE, end_date DATE) AS (
-with shopping_stage_data_raw as ( 
+  with shopping_stage_data_raw as ( 
     select
       -- USER DATA
       user_data.user_date,
@@ -2296,7 +2305,7 @@ Lorem ipsum
 
 ```sql
 CREATE OR REPLACE TABLE FUNCTION `tom-moretti.nameless_analytics.gtm_performances`(start_date DATE, end_date DATE) AS (
-SELECT
+  SELECT
     -- USER DATA
     user_data.user_date,
     user_data.user_id,
@@ -2377,7 +2386,7 @@ Lorem ipsum
 
 ```sql
 CREATE OR REPLACE TABLE FUNCTION `tom-moretti.nameless_analytics.consents`(start_date DATE, end_date DATE) AS (
-with consent_data as (
+  with consent_data as (
     SELECT
       session_date,
       session_id,
