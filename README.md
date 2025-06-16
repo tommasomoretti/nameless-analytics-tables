@@ -27,7 +27,8 @@ Start from here:
   - [Shopping stages closed funnel](#shopping-stages-closed-funnel)
   - [GTM performances](#gtm-performances)
   - [Consents](#consents)
-- Create tables
+- [Create tables](#create-tables)
+- [Create table functions](#create-table-functions)
 
 
 
