@@ -36,46 +36,21 @@ Start from here:
 ### Main table
 This is the schema of the raw data main table. It's a partitioned table by event_date, clustered by client_id, session_id and event_name.
 
-```sql
-create schema if not exists %s
-options (
-  -- default_kms_key_name = 'KMS_KEY_NAME',
-  -- default_partition_expiration_days = PARTITION_EXPIRATION,
-  -- default_table_expiration_days = TABLE_EXPIRATION,
-  -- max_time_travel_hours = HOURS, // default 168 hours => 7 days 
-  -- storage_billing_model = BILLING_MODEL // Phytical or logical (default)  
-  description = 'Nameless Analytics',
-  location = '%s'
-);
-```
-
 
 ### Main table
 Lorem ipsum
-
-```sql
-```
 
 
 ### User and sessions
 Lorem ipsum 
 
-```sql
-```
-
 
 ### Batch data loader logs
 Lorem ipsum
 
-```sql
-```
-
 
 ### Dates table
 Lorem ipsum 
-
-```sql
-```
 
 
 
