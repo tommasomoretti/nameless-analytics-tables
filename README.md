@@ -17,16 +17,16 @@ Start from here:
   - [Dates table](#dates-table)
   - [Batch data Loader logs](#data-loader-logs)
 - Table functions
-  - Users raw latest
-  - Users
-  - Sessions
-  - Pages
-  - Transactions
-  - Products
-  - Shopping stages open funnel
-  - Shopping stages closed funnel
-  - GTM performances
-  - Consents
+  - [Users raw latest](#users-raw-latest)
+  - [Users](#users)
+  - [Sessions](#sessions)
+  - [Pages](#pages)
+  - [Transactions](#transactions)
+  - [Products](#products)
+  - [Shopping stages open funnel](#shopping-stages-open-funnel)
+  - [Shopping stages closed funnel](#shopping-stages-closed-funnel)
+  - [GTM performances](#gtm-performances)
+  - [Consents](#consents)
 - [Create main tables and table functions](#create-main-tables-and-table-functions)
 
 
