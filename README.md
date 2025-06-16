@@ -34,21 +34,36 @@ Start from here:
 ### Main table
 This is the schema of the raw data main table. It's a partitioned table by event_date, clustered by client_id, session_id and event_name.
 
+```sql
+```
+
 
 ### Main table
 Lorem ipsum
+
+```sql
+```
 
 
 ### User and sessions
 Lorem ipsum 
 
+```sql
+```
+
 
 ### Batch data loader logs
 Lorem ipsum
 
+```sql
+```
+
 
 ### Dates table
 Lorem ipsum 
+
+```sql
+```
 
 
 
@@ -56,41 +71,71 @@ Lorem ipsum
 ### Users raw latest
 Lorem ipsum
 
+```sql
+```
+
 
 ### Users
 Lorem ipsum
+
+```sql
+```
 
 
 ### Sessions
 Lorem ipsum
 
+```sql
+```
+
 
 ### Pages
 Lorem ipsum
+
+```sql
+```
 
 
 ### Transactions
 Lorem ipsum
 
+```sql
+```
+
 
 ### Products
 Lorem ipsum
+
+```sql
+```
 
 
 ### Shopping stages open funnel
 Lorem ipsum
 
+```sql
+```
+
 
 ### Shopping stages closed funnel
 Lorem ipsum
+
+```sql
+```
 
 
 ### GTM performances
 Lorem ipsum
 
+```sql
+```
+
 
 ### Consents
 Lorem ipsum
+
+```sql
+```
 
 
 ---
