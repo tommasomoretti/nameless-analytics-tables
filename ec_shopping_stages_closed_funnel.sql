@@ -1,53 +1,78 @@
 CREATE OR REPLACE TABLE FUNCTION `tom-moretti.nameless_analytics.ec_shopping_stages_closed_funnel`(start_date DATE, end_date DATE) AS (
 with shopping_stage_data_raw as ( 
-        select
-          -- USER DATA
-          client_id,
-          first_value(user_id) over (partition by session_id order by event_timestamp asc) as user_id,
+    select
+      -- USER DATA
+      user_data.user_date,
+      user_data.user_id,
+      user_data.client_id,
+      user_data.user_first_session_timestamp,
+      user_data.user_last_session_timestamp,
+      days_from_first_to_last_visit,
+      days_from_first_visit,
+      days_from_last_visit,
+      user_data.user_channel_grouping,
+      user_data.user_source,
+      user_data.user_campaign,
+      user_data.user_device_type,
+      user_data.user_country,
+      user_data.user_language,
+      
+      -- SESSION DATA
+      user_data.session_date,
+      user_data.session_id, 
+      user_data.session_number,
+      user_data.cross_domain_session,
+      user_data.session_start_timestamp,
+      user_data.session_end_timestamp,
+      user_data.session_duration_sec,
+      user_data.session_channel_grouping,
+      user_data.session_source,
+      user_data.session_campaign,
+      user_data.session_hostname,
+      user_data.session_device_type,
+      user_data.session_country,
+      user_data.session_language,
+      user_data.session_browser_name,
+      user_data.session_landing_page_category,
+      user_data.session_landing_page_location,
+      user_data.session_landing_page_title,
+      user_data.session_exit_page_category,
+      user_data.session_exit_page_location,
+      user_data.session_exit_page_title,
 
-          -- SESSION DATA
-          session_id, 
-          first_value(event_timestamp) over (partition by session_id order by event_timestamp asc) as min_session_timestamp,
-          first_value((select value.string from unnest (event_data) where name = 'channel_grouping')) over (partition by session_id order by event_timestamp) as session_channel_grouping,
-          first_value((select value.string from unnest (event_data) where name = 'source')) over (partition by session_id order by event_timestamp) as session_source,
-          first_value((select value.string from unnest (event_data) where name = 'campaign')) over (partition by session_id order by event_timestamp) as session_campaign,
-          first_value((select value.string from unnest (event_data) where name = 'device_type')) over (partition by session_id order by event_timestamp) as session_device_type,
-          first_value((select value.string from unnest (event_data) where name = 'country')) over (partition by session_id order by event_timestamp) as session_country,
-          first_value((select value.string from unnest (event_data) where name = 'browser_name')) over (partition by session_id order by event_timestamp) as session_browser_name,
-          first_value((select value.string from unnest (event_data) where name = 'browser_language')) over (partition by session_id order by event_timestamp) as session_browser_language,
+      -- EVENT DATA
+      event_name,
+      event_date,
+      -- event_timestamp,
 
-          -- EVENT DATA
-          event_name,
-          event_date,
-          -- event_timestamp,
+      -- ECOMMERCE DATA
+      -- (select value.json from unnest(event_data) where name = 'ecommerce') as transaction_data,
 
-          -- ECOMMERCE DATA
-          -- (select value.json from unnest(event_data) where name = 'ecommerce') as transaction_data,
-        from `tom-moretti.nameless_analytics.events`
-        where true 
-          and (client_id != 'Redacted')  
-          and (session_id != 'Redacted_Redacted')
-      ),
+    from `tom-moretti.nameless_analytics.users_raw_latest` (start_date, end_date, 'session_level') as user_data
+      left join `tom-moretti.nameless_analytics.events` as event_data 
+        on user_data.client_id = event_data.client_id
+        and user_data.session_id = event_data.session_id
+  ),
 
-      all_sessions as (
-        select 
-          event_date,
-          client_id,
-          user_id,
-          session_id,
-          session_channel_grouping,
-          case
-            when session_source = 'tagassistant.google.com' then session_source
-            when net.reg_domain(session_source) is not null then net.reg_domain(session_source)
-            else session_source
-          end as original_session_source,
-          session_campaign,
-          session_device_type,
-          session_country,
-          session_browser_language,
-        from shopping_stage_data_raw
-        group by all
-      ),
+  all_sessions as (
+    select 
+      event_date,
+      client_id,
+      user_id,
+      session_id,
+      session_channel_grouping,
+      case
+        when session_source = 'tagassistant.google.com' then session_source
+        when net.reg_domain(session_source) is not null then net.reg_domain(session_source)
+        else session_source
+      end as original_session_source,
+      session_campaign,
+      session_device_type,
+      session_country,
+      session_language,
+    from shopping_stage_data_raw
+    group by all
+  ),
 
       view_item as (
         select 
@@ -63,7 +88,7 @@ with shopping_stage_data_raw as (
           session_campaign,
           session_device_type,
           session_country,
-          session_browser_language,
+          session_language,
         from shopping_stage_data_raw
         where event_name = 'view_item'
         group by all
@@ -83,7 +108,7 @@ with shopping_stage_data_raw as (
           session_campaign,
           session_device_type,
           session_country,
-          session_browser_language,
+          session_language,
         from shopping_stage_data_raw
         where event_name = 'add_to_cart'
         group by all
@@ -103,7 +128,7 @@ with shopping_stage_data_raw as (
           session_campaign,
           session_device_type,
           session_country,
-          session_browser_language,
+          session_language,
         from shopping_stage_data_raw
         where event_name = 'vieew_cart'
         group by all
@@ -123,7 +148,7 @@ with shopping_stage_data_raw as (
           session_campaign,
           session_device_type,
           session_country,
-          session_browser_language,
+          session_language,
         from shopping_stage_data_raw
         where event_name = 'begin_checkout'
         group by all
@@ -143,7 +168,7 @@ with shopping_stage_data_raw as (
           session_campaign,
           session_device_type,
           session_country,
-          session_browser_language,
+          session_language,
         from shopping_stage_data_raw
         where event_name = 'add_payment_info'
         group by all
@@ -163,7 +188,7 @@ with shopping_stage_data_raw as (
           session_campaign,
           session_device_type,
           session_country,
-          session_browser_language,
+          session_language,
         from shopping_stage_data_raw
         where event_name = 'add_shipping_info'
         group by all
@@ -183,7 +208,7 @@ with shopping_stage_data_raw as (
           session_campaign,
           session_device_type,
           session_country,
-          session_browser_language,
+          session_language,
         from shopping_stage_data_raw
         where event_name = 'purchase'
         group by all
@@ -201,7 +226,7 @@ with shopping_stage_data_raw as (
           all_sessions.session_campaign,
           all_sessions.session_device_type,
           all_sessions.session_country,
-          all_sessions.session_browser_language,
+          all_sessions.session_language,
 
           all_sessions.client_id as all_sessions_client_id,
           view_item.client_id as view_item_client_id,
@@ -268,19 +293,19 @@ with shopping_stage_data_raw as (
         session_campaign,
         session_device_type,
         session_country,
-        session_browser_language,
+        session_language,
         step_name,
         lead(client_id, 1) over (
-          partition by client_id, user_id, session_id, session_device_type, session_country, session_browser_language, session_channel_grouping, original_session_source, session_source, session_campaign
-          order by event_date, client_id, session_id, session_device_type, session_country, session_browser_language, session_channel_grouping, original_session_source,session_source, session_campaign, step_name
+          partition by client_id, user_id, session_id, session_device_type, session_country, session_language, session_channel_grouping, original_session_source, session_source, session_campaign
+          order by event_date, client_id, session_id, session_device_type, session_country, session_language, session_channel_grouping, original_session_source,session_source, session_campaign, step_name
         ) as client_id_next_step,
         lead(user_id, 1) over (
-          partition by client_id, user_id, session_id, session_device_type, session_country, session_browser_language, session_channel_grouping, original_session_source, session_source, session_campaign
-          order by event_date, client_id, session_id, session_device_type, session_country, session_browser_language, session_channel_grouping, original_session_source, session_source, session_campaign, step_name
+          partition by client_id, user_id, session_id, session_device_type, session_country, session_language, session_channel_grouping, original_session_source, session_source, session_campaign
+          order by event_date, client_id, session_id, session_device_type, session_country, session_language, session_channel_grouping, original_session_source, session_source, session_campaign, step_name
         ) as user_id_next_step,
         lead(session_id, 1) over (
-          partition by client_id, user_id, session_id, session_device_type, session_country, session_browser_language, session_channel_grouping, original_session_source, session_source, session_campaign
-          order by event_date, client_id, session_id, session_device_type, session_country, session_browser_language, session_channel_grouping, original_session_source, session_source, session_campaign, step_name
+          partition by client_id, user_id, session_id, session_device_type, session_country, session_language, session_channel_grouping, original_session_source, session_source, session_campaign
+          order by event_date, client_id, session_id, session_device_type, session_country, session_language, session_channel_grouping, original_session_source, session_source, session_campaign, step_name
         ) as session_id_next_step
       from steps_pivot
       where true 
