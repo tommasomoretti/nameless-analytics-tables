@@ -27,7 +27,7 @@ Start from here:
   - [Shopping stages closed funnel](#shopping-stages-closed-funnel)
   - [GTM performances](#gtm-performances)
   - [Consents](#consents)
-- [Create main tables and table functions](#create-main-tables-and-table-functions)
+
 
 
 ## Tables
@@ -92,10 +92,6 @@ Lorem ipsum
 ### Consents
 Lorem ipsum
 
-
-
-## Create main tables and table functions
-Lorem ipsum
 
 ---
 
