@@ -10,7 +10,7 @@ The Nameless Analytics tables is a set of tables in BigQuery where users, sessio
 
 For an overview of how Nameless Analytics works [start from here](https://github.com/tommasomoretti/nameless-analytics/).
 
-Start from here:
+Table of contents:
 - Tables
   - [Main table](#main-table)
   - [User and sessions](#user-and-sessions)
