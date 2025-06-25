@@ -34,10 +34,8 @@ Table of contents:
 
 ## Tables
 ### Main table
-This is the schema of the raw data main table. It's a partitioned table by event_date, clustered by client_id, session_id and event_name.
+This is the schema of the raw data Main table. It's a partitioned table by event_date, clustered by client_id, session_id and event_name.
 
-
-### Main table
 | Column                     | Type            | Description                                                                                                | 
 |----------------------------|-----------------|------------------------------------------------------------------------------------------------------------| 
 | event_date                 | DATE NOT NULL   | Date of the request                                                                                        | 
@@ -56,10 +54,12 @@ This is the schema of the raw data main table. It's a partitioned table by event
 | consent_data               | ARRAY           | Consent data parameters                                                                                    |
 
 ### Users raw changelog and Users raw latest
-Lorem ipsum 
+The Users raw changelog table and the Users raw latest view are the results of the Google Firestore export.
 
 
 ### Batch data loader logs
+This is the schema of the Batch data loader logs table. It's a partitioned table by date, clustered by status.
+
 | Column                | Type     | Description                                       |
 |-----------------------|----------|---------------------------------------------------|
 | date                  | DATE     | Date of the batch import                          |
@@ -74,6 +74,8 @@ Lorem ipsum
 
 
 ### Dates table
+This is the schema of the Dates table. It's a partitioned table by date, clustered by month_name and day_name.
+
 | Column             | Type   | Description                                                    |
 |--------------------|--------|----------------------------------------------------------------|
 | date               | DATE   | The date value                                                 |
@@ -92,6 +94,8 @@ Lorem ipsum
 
 ## Table functions
 ### Users raw latest
+This is the schema of the Users raw latest table function.
+
 | Column                        | Type      | Description                            |
 |-------------------------------|-----------|----------------------------------------|
 | user_date                     | DATE      | Date associated with the user          |
@@ -134,6 +138,8 @@ Lorem ipsum
 
 
 ### Users
+This is the schema of the Users table function.
+
 | Column                        | Type      | Description                                                                 |
 |-------------------------------|-----------|-----------------------------------------------------------------------------|
 | user_date                     | DATE      | Date associated with the user                                               |
@@ -202,6 +208,8 @@ Lorem ipsum
 
 
 ### Sessions
+This is the schema of the Sessions table function.
+
 | Column                          | Type       | Description                                                  |
 |-----------------------------    |------------|--------------------------------------------------------      |
 | user_date                       | DATE       | Date associated with the user                                |
@@ -275,6 +283,8 @@ Lorem ipsum
 
 
 ### Pages
+This is the schema of the Pages table function.
+
 | Column                        | Type      | Description                                      |
 |-------------------------------|-----------|--------------------------------------------------|
 | user_date                     | DATE      | Date associated with the user                    |
@@ -321,6 +331,8 @@ Lorem ipsum
 
 
 ### Transactions
+This is the schema of the Transaction table function.
+
 | Column                   | Type      | Description                                                 |
 |--------------------------|-----------|-------------------------------------------------------------|
 | user_date                | DATE      | Date associated with the user                               |
@@ -368,6 +380,8 @@ Lorem ipsum
 
 
 ### Products
+This is the schema of the Products table function.
+
 | Column                          | Type      | Description                                          |
 |---------------------------------|-----------|------------------------------------------------------|
 | user_date                       | DATE      | Date associated with the user                        |
@@ -440,6 +454,8 @@ Lorem ipsum
 
 
 ### Shopping stages open funnel
+This is the schema of the Shopping stages open funnel table function.
+
 | Column                    | Type   | Description                                                                                 |
 |---------------------------|--------|---------------------------------------------------------------------------------------------|
 | event_date                | DATE   | Date of the event                                                                           |
@@ -463,6 +479,8 @@ Lorem ipsum
 
 
 ### Shopping stages closed funnel
+This is the schema of the Shopping stages closed funnel table function.
+
 | Column                   | Type   | Description                                                               |
 |--------------------------|--------|---------------------------------------------------------------------------|
 | event_date               | DATE   | Date of the event                                                         |
@@ -483,6 +501,8 @@ Lorem ipsum
 
 
 ### GTM performances
+This is the schema of the GTM performances table function.
+
 | Column                        | Type      | Description                                                  |
 |-------------------------------|-----------|--------------------------------------------------------------|
 | user_date                     | DATE      | Date associated with the user                                |
@@ -541,6 +561,8 @@ Lorem ipsum
 
 
 ### Consents
+This is the schema of the Consents table function.
+
 | Column                           | Type   | Description                                                   |
 |----------------------------------|--------|---------------------------------------------------------------|
 | session_date                     | DATE   | Date of the session                                           |
