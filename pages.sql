@@ -1,5 +1,5 @@
 CREATE OR REPLACE TABLE FUNCTION `tom-moretti.nameless_analytics.pages`(start_date DATE, end_date DATE) AS (
-with page_data_raw as ( 
+  with page_data_raw as ( 
     select
       -- USER DATA
       user_data.user_date,
