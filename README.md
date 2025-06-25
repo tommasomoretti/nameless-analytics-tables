@@ -13,7 +13,7 @@ For an overview of how Nameless Analytics works [start from here](https://github
 Table of contents:
 - Tables
   - [Main table](#main-table)
-  - [User and sessions](#user-and-sessions)
+  - [Users raw changelog and Users raw latest](#users-raw-changelog-and-users-raw-latest)
   - [Batch data loader logs](#batch-data-loader-logs)
   - [Dates table](#dates-table)
 - Table functions
@@ -38,19 +38,55 @@ This is the schema of the raw data main table. It's a partitioned table by event
 
 
 ### Main table
-Lorem ipsum
+| Column                     | Type            | Description                                                                                                | 
+|----------------------------|-----------------|------------------------------------------------------------------------------------------------------------| 
+| event_date                 | DATE NOT NULL   | Date of the request                                                                                        | 
+| event_datetime             | DATETIME        | Datetime of the request                                                                                    | 
+| event_timestamp            | INT64 NOT NULL  | Insert timestamp of the event                                                                              | 
+| processing_event_timestamp | INT64           | Nameless Analytics Server-side Client Tag received event timestamp or script execution timestamp           | 
+| event_origin               | STRING NOT NULL | "Measurement Protocol" if hit from measurement protocol, "Website" if from browser, "Batch" if data loader |
+| job_id                     | STRING          | Job id for Measurement Protocol hits or Batch imports                                                      |
+| content_length             | INT64           | Size of the message body in bytes                                                                          |
+| client_id                  | STRING NOT NULL | Client ID                                                                                                  |
+| session_id                 | STRING NOT NULL | Session ID                                                                                                 |
+| event_id                   | STRING NOT NULL | Event ID                                                                                                   |
+| event_name                 | STRING NOT NULL | Event name                                                                                                 |
+| ecommerce                  | JSON            | Ecommerce object                                                                                           |
+| datalayer                  | JSON            | Current dataLayer value                                                                                    |
+| consent_data               | ARRAY           | Consent data parameters                                                                                    |
 
-
-### User and sessions
+### Users raw changelog and Users raw latest
 Lorem ipsum 
 
 
 ### Batch data loader logs
-Lorem ipsum
+| Column                | Type     | Description                                       |
+|-----------------------|----------|---------------------------------------------------|
+| date                  | DATE     | Date of the batch import                          |
+| datetime              | DATETIME | Datetime of the batch import                      |
+| timestamp             | INT64    | Timestamp of the batch import                     |
+| job_id                | STRING   | Data loader script execution job id               |
+| status                | STRING   | Data loader script execution status               |
+| message               | STRING   | Data loader script execution result               |
+| execution_time_micros | INT64    | Data loader script execution time in microseconds |
+| rows_inserted         | INT64    | Number of rows inserted                           |
+ 
 
 
 ### Dates table
-Lorem ipsum 
+| Column             | Type   | Description                                                    |
+|--------------------|--------|----------------------------------------------------------------|
+| date               | DATE   | The date value                                                 |
+| year               | INT64  | Year extracted from the date                                   |
+| quarter            | INT64  | Quarter of the year (1-4) extracted from the date              |
+| month_number       | INT64  | Month number of the year (1-12) extracted from the date        |
+| month_name         | STRING | Full name of the month (e.g., January) extracted from the date |
+| week_number_sunday | INT64  | Week number of the year, starting on Sunday                    |
+| week_number_monday | INT64  | Week number of the year, starting on Monday                    |
+| day_number         | INT64  | Day number of the month (1-31)                                 |
+| day_name           | STRING | Full name of the day of the week (e.g., Monday)                |
+| day_of_week_number | INT64  | Day of the week number (1 for Sunday, 7 for Saturday)          |
+| is_weekend         | BOOL   | True if the day is Saturday or Sunday                          |
 
 
 
