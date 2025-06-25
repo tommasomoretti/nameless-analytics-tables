@@ -1,5 +1,5 @@
 CREATE OR REPLACE TABLE FUNCTION `tom-moretti.nameless_analytics.consents`(start_date DATE, end_date DATE) AS (
-with consent_data as (
+  with consent_data as (
     SELECT
       session_date,
       session_id,
