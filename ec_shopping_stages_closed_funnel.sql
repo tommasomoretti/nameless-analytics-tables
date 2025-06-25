@@ -1,5 +1,5 @@
 CREATE OR REPLACE TABLE FUNCTION `tom-moretti.nameless_analytics.ec_shopping_stages_closed_funnel`(start_date DATE, end_date DATE) AS (
-with shopping_stage_data_raw as ( 
+  with shopping_stage_data_raw as ( 
     select
       -- USER DATA
       user_data.user_date,
