@@ -1,5 +1,5 @@
 CREATE OR REPLACE TABLE FUNCTION `tom-moretti.nameless_analytics.gtm_performances`(start_date DATE, end_date DATE) AS (
-SELECT
+  SELECT
     -- USER DATA
     user_data.user_date,
     user_data.user_id,
