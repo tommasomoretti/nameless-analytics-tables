@@ -58,6 +58,47 @@ Lorem ipsum
 ### Users raw latest
 Lorem ipsum
 
+| Colonna                       | Descrizione                              |
+|-------------------------------|----------------------------------------- |
+| user_date                     | Data associata all’utente                |
+| user_id                       | Identificativo utente                    |
+| client_id                     | Identificativo client                    |
+| user_first_session_timestamp  | Timestamp della prima sessione utente    |
+| user_last_session_timestamp   | Timestamp dell’ultima sessione utente    |
+| days_from_first_to_last_visit | Giorni tra prima e ultima visita         |
+| days_from_first_visit         | Giorni dalla prima visita a oggi         |
+| days_from_last_visit          | Giorni dall’ultima visita a oggi         |
+| user_channel_grouping         | Raggruppamento canale utente             |
+| user_source                   | Fonte utente                             |
+| user_campaign                 | Campagna utente                          |
+| user_campaign_id              | ID campagna utente                       |
+| user_device_type              | Tipo dispositivo utente                  |
+| user_country                  | Paese utente                             |
+| user_language                 | Lingua utente                            |
+| session_date                  | Data della sessione                      |
+| session_id                    | ID sessione                              |
+| session_number                | Numero sessione                          |
+| cross_domain_session          | Flag sessione cross-domain               |
+| session_start_timestamp       | Timestamp inizio sessione                |
+| session_end_timestamp         | Timestamp fine sessione                  |
+| session_duration_sec          | Durata sessione in secondi               |
+| session_channel_grouping      | Raggruppamento canale sessione           |
+| session_source                | Fonte sessione                           |
+| session_campaign              | Campagna sessione                        |
+| session_campaign_id           | ID campagna sessione                     |
+| session_device_type           | Tipo dispositivo sessione                |
+| session_country               | Paese sessione                           |
+| session_language              | Lingua sessione                          |
+| session_hostname              | Hostname sessione                        |
+| session_browser_name          | Nome browser sessione                    |
+| session_landing_page_category | Categoria pagina di atterraggio sessione |
+| session_landing_page_location | URL pagina di atterraggio sessione       |
+| session_landing_page_title    | Titolo pagina di atterraggio sessione    |
+| session_exit_page_category    | Categoria pagina di uscita sessione      |
+| session_exit_page_location    | URL pagina di uscita sessione            |
+| session_exit_page_title       | Titolo pagina di uscita sessione         |
+
+
 ```sql
 CREATE OR REPLACE TABLE FUNCTION `tom-moretti.nameless_analytics.users_raw_latest`(start_date DATE, end_date DATE, user_session_scope_param STRING) AS (
   with users_raw as (
