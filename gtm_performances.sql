@@ -1,74 +1,81 @@
 CREATE OR REPLACE TABLE FUNCTION `tom-moretti.nameless_analytics.gtm_performances`(start_date DATE, end_date DATE) AS (
-  SELECT
+  SELECT 
     -- USER DATA
-    user_data.user_date,
-    user_data.user_id,
-    user_data.client_id,
-    user_data.user_first_session_timestamp,
-    user_data.user_last_session_timestamp,
-    days_from_first_to_last_visit,
-    days_from_first_visit,
-    days_from_last_visit,
-    user_data.user_channel_grouping,
-    user_data.user_source,
-    user_data.user_campaign,
-    user_data.user_device_type,
-    user_data.user_country,
-    user_data.user_language,
-    
+    user_date,
+    client_id,
+    user_id,
+    user_channel_grouping,
+    user_source,
+    user_tld_source,
+    user_campaign,
+    user_device_type,
+    user_country,
+    user_language,
+    case 
+      when session_number = 1 then 'new_user'
+      when session_number > 1 then 'returning_user'
+    end as user_type,
+    case 
+      when session_number = 1 then client_id
+      else null
+    end as new_user,
+    case 
+      when session_number > 1 then client_id
+      else null
+    end as returning_user,
+
     -- SESSION DATA
-    user_data.session_date,
-    user_data.session_id, 
-    user_data.session_number,
-    user_data.cross_domain_session,
-    user_data.session_start_timestamp,
-    user_data.session_end_timestamp,
-    user_data.session_duration_sec,
-    user_data.session_channel_grouping,
-    user_data.session_source,
-    user_data.session_campaign,
-    user_data.session_hostname,
-    user_data.session_device_type,
-    user_data.session_country,
-    user_data.session_language,
-    user_data.session_browser_name,
-    user_data.session_landing_page_category,
-    user_data.session_landing_page_location,
-    user_data.session_landing_page_title,
-    user_data.session_exit_page_category,
-    user_data.session_exit_page_location,
-    user_data.session_exit_page_title,
+    session_date,
+    session_number,
+    session_id,
+    session_start_timestamp,
+    session_end_timestamp,
+    session_duration_sec,
+    session_channel_grouping,
+    session_source,
+    session_tld_source,
+    session_campaign,
+    cross_domain_session,  
+    session_landing_page_category,
+    session_landing_page_location,
+    session_landing_page_title,
+    session_exit_page_category,
+    session_exit_page_location,
+    session_exit_page_title,
+    session_hostname,
+    session_device_type,
+    session_country,
+    session_language,
+    session_browser_name,
 
     -- EVENT DATA
-    events.event_date,
-    events.event_datetime,
-    events.event_timestamp,
-    events.processing_event_timestamp,
-    events.processing_event_timestamp - events.event_timestamp AS delay_in_milliseconds,
-    (events.processing_event_timestamp - events.event_timestamp) / 1000 AS delay_in_seconds,
-    events.event_origin,
-    events.content_length,
-    (SELECT value.string FROM UNNEST(events.event_data) WHERE name = 'page_hostname') AS cs_hostname,
-    (SELECT value.string FROM UNNEST(events.event_data) WHERE name = 'ss_hostname') AS ss_hostname,
-    (SELECT value.string FROM UNNEST(events.event_data) WHERE name = 'cs_container_id') AS cs_container_id,
-    (SELECT value.string FROM UNNEST(events.event_data) WHERE name = 'ss_container_id') AS ss_container_id,
-    ROW_NUMBER() OVER (PARTITION BY user_data.client_id, user_data.session_id ORDER BY events.event_timestamp ASC) AS hit_number,
-    events.event_name,
-    events.event_id,
-    ARRAY_AGG(
+    event_date,
+    event_datetime,
+    event_timestamp,
+    processing_event_timestamp,
+    processing_event_timestamp - event_timestamp AS delay_in_milliseconds,
+    (processing_event_timestamp - event_timestamp) / 1000 AS delay_in_seconds,
+    event_origin,
+    content_length,
+    (SELECT value.string FROM UNNEST(event_data) WHERE name = 'page_hostname') AS cs_hostname,
+    (SELECT value.string FROM UNNEST(event_data) WHERE name = 'ss_hostname') AS ss_hostname,
+    (SELECT value.string FROM UNNEST(event_data) WHERE name = 'cs_container_id') AS cs_container_id,
+    (SELECT value.string FROM UNNEST(event_data) WHERE name = 'ss_container_id') AS ss_container_id,
+    ROW_NUMBER() OVER (PARTITION BY client_id, session_id ORDER BY event_timestamp ASC) AS hit_number,
+    event_name,
+    event_id,
+    ARRAY(
+      SELECT AS STRUCT
+        name,
         STRUCT(
-            event_data.name,
-            event_data.value.string as string_value,
-            event_data.value.int as int_value,
-            event_data.value.float as float_value,
-            TO_JSON_STRING(event_data.value.json) AS json_value
-        )
+          value.string AS string,
+          value.int AS int,
+          value.float AS float,
+          TO_JSON_STRING(value.json) AS json
+        ) AS value
+      FROM UNNEST(event_data)
     ) AS event_data,
     TO_JSON_STRING(ecommerce) as ecommerce,
     TO_JSON_STRING(dataLayer) as dataLayer
-  FROM `tom-moretti.nameless_analytics.users_raw_latest`(start_date, end_date, 'session_level') AS user_data
-  LEFT JOIN `tom-moretti.nameless_analytics.events` AS events
-    ON user_data.client_id = events.client_id AND user_data.session_id = events.session_id
-    CROSS JOIN UNNEST(events.event_data) AS event_data
-  GROUP BY all
+  from `tom-moretti.nameless_analytics.events` (start_date, end_date, 'session_level')
 );
