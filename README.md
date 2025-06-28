@@ -36,22 +36,25 @@ Table of contents:
 ### Events raw table
 This is the schema of the raw data main table. It's a partitioned table by event_date, clustered by client_id, session_id and event_name.
 
-| Column                     | Type     | Description                                                                                                | 
-|----------------------------|----------|------------------------------------------------------------------------------------------------------------| 
-| event_date                 | DATE     | Date of the request                                                                                        | 
-| event_datetime             | DATETIME | Datetime of the request                                                                                    | 
-| event_timestamp            | INT64    | Insert timestamp of the event                                                                              | 
-| processing_event_timestamp | INT64    | Nameless Analytics Server-side Client Tag received event timestamp or script execution timestamp           | 
-| event_origin               | STRING   | "Streaming Protocol" if hit from measurement protocol, "Website" if from browser, "Batch" if data loader   |
-| job_id                     | STRING   | Job id for Measurement Protocol hits or Batch imports                                                      |
-| content_length             | INT64    | Size of the message body in bytes                                                                          |
-| client_id                  | STRING   | Client ID                                                                                                  |
-| session_id                 | STRING   | Session ID                                                                                                 |
-| event_id                   | STRING   | Event ID                                                                                                   |
-| event_name                 | STRING   | Event name                                                                                                 |
-| ecommerce                  | JSON     | Ecommerce object                                                                                           |
-| datalayer                  | JSON     | Current dataLayer value                                                                                    |
-| consent_data               | ARRAY    | Consent data parameters                                                                                    |
+| Nome campo                 | Tipo     | Modalità | Descrizione                                                                                                                                                                                                                    |
+|----------------------------|----------|----------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| event_date                 | DATE     | REQUIRED | Date of the request                                                                                                                                                                                                            |
+| event_datetime             | DATETIME | NULLABLE | Datetime of the request                                                                                                                                                                                                        |
+| event_timestamp            | INTEGER  | REQUIRED | Insert timestamp of the event                                                                                                                                                                                                  |
+| processing_event_timestamp | INTEGER  | NULLABLE | Nameless Analytics Server-side Client Tag received event timestamp when hits are sent from a website or a Streaming Protocol request. Script start execution timestamp if hits are imported by Nameless Analytics Data Loader. |
+| event_origin               | STRING   | REQUIRED | "Streaming Protocol" if the hit comes from streaming protocol, "Website" if the hit comes from browser, "Batch" if the hit comes from data_loader script                                                                       |
+| job_id                     | STRING   | NULLABLE | Job id for Streaming Protocol hits or Batch imports                                                                                                                                                                            |
+| content_length             | INTEGER  | NULLABLE | Size of the message body, in bytes                                                                                                                                                                                             |
+| client_id                  | STRING   | REQUIRED | Client ID                                                                                                                                                                                                                      |
+| user_data                  | RECORD   | REPEATED | User data                                                                                                                                                                                                                      |
+| session_id                 | STRING   | REQUIRED | Session ID                                                                                                                                                                                                                     |
+| session_data               | RECORD   | REPEATED | Session data                                                                                                                                                                                                                   |
+| event_id                   | STRING   | REQUIRED | Event ID                                                                                                                                                                                                                       |
+| event_name                 | STRING   | REQUIRED | Event name                                                                                                                                                                                                                     |
+| event_data                 | RECORD   | REPEATED | Event data                                                                                                                                                                                                                     |
+| ecommerce                  | JSON     | NULLABLE | Ecommerce object                                                                                                                                                                                                               |
+| datalayer                  | JSON     | NULLABLE | Current dataLayer value                                                                                                                                                                                                        |
+| consent_data               | RECORD   | REPEATED | Consent data                                                                                                   
 
 
 ### Users raw changelog table
