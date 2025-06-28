@@ -1,215 +1,424 @@
 CREATE OR REPLACE TABLE FUNCTION `tom-moretti.nameless_analytics.ec_shopping_stages_open_funnel`(start_date DATE, end_date DATE) AS (
-  with shopping_stage_data_raw as ( 
+  with event_data as ( 
     select
       -- USER DATA
-      user_data.user_date,
-      user_data.user_id,
-      user_data.client_id,
-      user_data.user_first_session_timestamp,
-      user_data.user_last_session_timestamp,
-      days_from_first_to_last_visit,
-      days_from_first_visit,
-      days_from_last_visit,
-      user_data.user_channel_grouping,
-      user_data.user_source,
-      user_data.user_campaign,
-      user_data.user_device_type,
-      user_data.user_country,
-      user_data.user_language,
-      
+      user_date,
+      client_id,
+      user_id,
+      user_channel_grouping,
+      user_source,
+      user_tld_source,
+      user_campaign,
+      user_device_type,
+      user_country,
+      user_language,
+      case 
+        when session_number = 1 then 'new_user'
+        when session_number > 1 then 'returning_user'
+      end as user_type,
+      case 
+        when session_number = 1 then client_id
+        else null
+      end as new_user,
+      case 
+        when session_number > 1 then client_id
+        else null
+      end as returning_user,
+  
       -- SESSION DATA
-      user_data.session_date,
-      user_data.session_id, 
-      user_data.session_number,
-      user_data.cross_domain_session,
-      user_data.session_start_timestamp,
-      user_data.session_end_timestamp,
-      user_data.session_duration_sec,
-      user_data.session_channel_grouping,
-      user_data.session_source,
-      user_data.session_campaign,
-      user_data.session_hostname,
-      user_data.session_device_type,
-      user_data.session_country,
-      user_data.session_language,
-      user_data.session_browser_name,
-      user_data.session_landing_page_category,
-      user_data.session_landing_page_location,
-      user_data.session_landing_page_title,
-      user_data.session_exit_page_category,
-      user_data.session_exit_page_location,
-      user_data.session_exit_page_title,
+      session_date,
+      session_number,
+      session_id,
+      session_start_timestamp,
+      session_end_timestamp,
+      session_duration_sec,
+      session_channel_grouping,
+      session_source,
+      session_tld_source,
+      session_campaign,
+      cross_domain_session,  
+      session_landing_page_category,
+      session_landing_page_location,
+      session_landing_page_title,
+      session_exit_page_category,
+      session_exit_page_location,
+      session_exit_page_title,
+      session_hostname,
+      session_device_type,
+      session_country,
+      session_language,
+      session_browser_name,
 
       -- EVENT DATA
       event_name,
       event_date,
       -- event_timestamp,
-
-      -- ECOMMERCE DATA
-      -- (select value.json from unnest(event_data) where name = 'ecommerce') as transaction_data,
-
-    from `tom-moretti.nameless_analytics.users_raw_latest` (start_date, end_date, 'session_level') as user_data
-      left join `tom-moretti.nameless_analytics.events` as event_data 
-        on user_data.client_id = event_data.client_id
-        and user_data.session_id = event_data.session_id
+    from `tom-moretti.nameless_analytics.events` (start_date, end_date, 'session_level')
   ),
 
   all_sessions as (
     select 
-      event_date,
+      -- USER DATA
+      user_date,
       client_id,
       user_id,
+      user_channel_grouping,
+      user_source,
+      user_tld_source,
+      user_campaign,
+      user_device_type,
+      user_country,
+      user_language,
+      user_type,
+      new_user,
+      returning_user,
+  
+      -- SESSION DATA
+      session_date,
+      session_number,
       session_id,
+      session_start_timestamp,
+      session_end_timestamp,
+      session_duration_sec,
       session_channel_grouping,
-      case
-        when session_source = 'tagassistant.google.com' then session_source
-        when net.reg_domain(session_source) is not null then net.reg_domain(session_source)
-        else session_source
-      end as original_session_source,
+      session_source,
+      session_tld_source,
       session_campaign,
+      cross_domain_session,  
+      session_landing_page_category,
+      session_landing_page_location,
+      session_landing_page_title,
+      session_exit_page_category,
+      session_exit_page_location,
+      session_exit_page_title,
+      session_hostname,
       session_device_type,
       session_country,
       session_language,
-    from shopping_stage_data_raw
+      session_browser_name,
+      event_date,
+    from event_data
     group by all
   ),
 
   view_item as (
     select 
-      event_date,
+      -- USER DATA
+      user_date,
       client_id,
       user_id,
+      user_channel_grouping,
+      user_source,
+      user_tld_source,
+      user_campaign,
+      user_device_type,
+      user_country,
+      user_language,
+      user_type,
+      new_user,
+      returning_user,
+  
+      -- SESSION DATA
+      session_date,
+      session_number,
       session_id,
+      session_start_timestamp,
+      session_end_timestamp,
+      session_duration_sec,
       session_channel_grouping,
-      case
-        when net.reg_domain(session_source) is not null then net.reg_domain(session_source)
-        else session_source
-      end as original_session_source,
+      session_source,
+      session_tld_source,
       session_campaign,
+      cross_domain_session,  
+      session_landing_page_category,
+      session_landing_page_location,
+      session_landing_page_title,
+      session_exit_page_category,
+      session_exit_page_location,
+      session_exit_page_title,
+      session_hostname,
       session_device_type,
       session_country,
       session_language,
-    from shopping_stage_data_raw
+      session_browser_name,
+      event_date
+    from event_data
     where event_name = 'view_item'
     group by all
   ),
 
   add_to_cart as (
     select 
-      event_date,
+      -- USER DATA
+      user_date,
       client_id,
       user_id,
+      user_channel_grouping,
+      user_source,
+      user_tld_source,
+      user_campaign,
+      user_device_type,
+      user_country,
+      user_language,
+      user_type,
+      new_user,
+      returning_user,
+  
+      -- SESSION DATA
+      session_date,
+      session_number,
       session_id,
+      session_start_timestamp,
+      session_end_timestamp,
+      session_duration_sec,
       session_channel_grouping,
-      case
-        when net.reg_domain(session_source) is not null then net.reg_domain(session_source)
-        else session_source
-      end as original_session_source,
+      session_source,
+      session_tld_source,
       session_campaign,
+      cross_domain_session,  
+      session_landing_page_category,
+      session_landing_page_location,
+      session_landing_page_title,
+      session_exit_page_category,
+      session_exit_page_location,
+      session_exit_page_title,
+      session_hostname,
       session_device_type,
       session_country,
       session_language,
-    from shopping_stage_data_raw
+      session_browser_name,
+      event_date
+    from event_data
     where event_name = 'add_to_cart'
     group by all
   ),
 
   view_cart as (
     select 
-      event_date,
+      -- USER DATA
+      user_date,
       client_id,
       user_id,
+      user_channel_grouping,
+      user_source,
+      user_tld_source,
+      user_campaign,
+      user_device_type,
+      user_country,
+      user_language,
+      user_type,
+      new_user,
+      returning_user,
+  
+      -- SESSION DATA
+      session_date,
+      session_number,
       session_id,
+      session_start_timestamp,
+      session_end_timestamp,
+      session_duration_sec,
       session_channel_grouping,
-      case
-        when net.reg_domain(session_source) is not null then net.reg_domain(session_source)
-        else session_source
-      end as original_session_source,
+      session_source,
+      session_tld_source,
       session_campaign,
+      cross_domain_session,  
+      session_landing_page_category,
+      session_landing_page_location,
+      session_landing_page_title,
+      session_exit_page_category,
+      session_exit_page_location,
+      session_exit_page_title,
+      session_hostname,
       session_device_type,
       session_country,
       session_language,
-    from shopping_stage_data_raw
+      session_browser_name,
+      event_date
+    from event_data
     where event_name = 'view_cart'
     group by all
   ),
 
   begin_checkout as (
     select 
-      event_date,
+      -- USER DATA
+      user_date,
       client_id,
       user_id,
+      user_channel_grouping,
+      user_source,
+      user_tld_source,
+      user_campaign,
+      user_device_type,
+      user_country,
+      user_language,
+      user_type,
+      new_user,
+      returning_user,
+  
+      -- SESSION DATA
+      session_date,
+      session_number,
       session_id,
+      session_start_timestamp,
+      session_end_timestamp,
+      session_duration_sec,
       session_channel_grouping,
-      case
-        when net.reg_domain(session_source) is not null then net.reg_domain(session_source)
-        else session_source
-      end as original_session_source,
+      session_source,
+      session_tld_source,
       session_campaign,
+      cross_domain_session,  
+      session_landing_page_category,
+      session_landing_page_location,
+      session_landing_page_title,
+      session_exit_page_category,
+      session_exit_page_location,
+      session_exit_page_title,
+      session_hostname,
       session_device_type,
       session_country,
       session_language,
-    from shopping_stage_data_raw
+      session_browser_name,
+      event_date
+    from event_data
     where event_name = 'begin_checkout'
     group by all
   ),
 
   add_payment_info as (
     select 
-      event_date,
+      -- USER DATA
+      user_date,
       client_id,
       user_id,
+      user_channel_grouping,
+      user_source,
+      user_tld_source,
+      user_campaign,
+      user_device_type,
+      user_country,
+      user_language,
+      user_type,
+      new_user,
+      returning_user,
+  
+      -- SESSION DATA
+      session_date,
+      session_number,
       session_id,
+      session_start_timestamp,
+      session_end_timestamp,
+      session_duration_sec,
       session_channel_grouping,
-      case
-        when net.reg_domain(session_source) is not null then net.reg_domain(session_source)
-        else session_source
-      end as original_session_source,
+      session_source,
+      session_tld_source,
       session_campaign,
+      cross_domain_session,  
+      session_landing_page_category,
+      session_landing_page_location,
+      session_landing_page_title,
+      session_exit_page_category,
+      session_exit_page_location,
+      session_exit_page_title,
+      session_hostname,
       session_device_type,
       session_country,
       session_language,
-    from shopping_stage_data_raw
+      session_browser_name,
+      event_date
+    from event_data
     where event_name = 'add_payment_info'
     group by all
   ),
 
   add_shipping_info as (
     select 
-      event_date,
+      -- USER DATA
+      user_date,
       client_id,
       user_id,
+      user_channel_grouping,
+      user_source,
+      user_tld_source,
+      user_campaign,
+      user_device_type,
+      user_country,
+      user_language,
+      user_type,
+      new_user,
+      returning_user,
+  
+      -- SESSION DATA
+      session_date,
+      session_number,
       session_id,
+      session_start_timestamp,
+      session_end_timestamp,
+      session_duration_sec,
       session_channel_grouping,
-      case
-        when net.reg_domain(session_source) is not null then net.reg_domain(session_source)
-        else session_source
-      end as original_session_source,
+      session_source,
+      session_tld_source,
       session_campaign,
+      cross_domain_session,  
+      session_landing_page_category,
+      session_landing_page_location,
+      session_landing_page_title,
+      session_exit_page_category,
+      session_exit_page_location,
+      session_exit_page_title,
+      session_hostname,
       session_device_type,
       session_country,
       session_language,
-    from shopping_stage_data_raw
+      session_browser_name,
+      event_date
+    from event_data
     where event_name = 'add_shipping_info'
     group by all
   ),
 
   purchase as (
     select 
-      event_date,
+      -- USER DATA
+      user_date,
       client_id,
       user_id,
+      user_channel_grouping,
+      user_source,
+      user_tld_source,
+      user_campaign,
+      user_device_type,
+      user_country,
+      user_language,
+      user_type,
+      new_user,
+      returning_user,
+  
+      -- SESSION DATA
+      session_date,
+      session_number,
       session_id,
+      session_start_timestamp,
+      session_end_timestamp,
+      session_duration_sec,
       session_channel_grouping,
-      case
-        when net.reg_domain(session_source) is not null then net.reg_domain(session_source)
-        else session_source
-      end as original_session_source,
+      session_source,
+      session_tld_source,
       session_campaign,
+      cross_domain_session,  
+      session_landing_page_category,
+      session_landing_page_location,
+      session_landing_page_title,
+      session_exit_page_category,
+      session_exit_page_location,
+      session_exit_page_title,
+      session_hostname,
       session_device_type,
       session_country,
       session_language,
-    from shopping_stage_data_raw
+      session_browser_name,
+      event_date
+    from event_data
     where event_name = 'purchase'
     group by all
   ),
@@ -297,16 +506,45 @@ CREATE OR REPLACE TABLE FUNCTION `tom-moretti.nameless_analytics.ec_shopping_sta
       
   union_steps_def as (
     select
-      event_date,
+      -- USER DATA
+      user_date,
       client_id,
       user_id,
+      user_channel_grouping,
+      user_source,
+      user_tld_source,
+      user_campaign,
+      user_device_type,
+      user_country,
+      user_language,
+      user_type,
+      new_user,
+      returning_user,
+  
+      -- SESSION DATA
+      session_date,
+      session_number,
       session_id,
+      session_start_timestamp,
+      session_end_timestamp,
+      session_duration_sec,
       session_channel_grouping,
-      original_session_source,
+      session_source,
+      session_tld_source,
       session_campaign,
+      cross_domain_session,  
+      session_landing_page_category,
+      session_landing_page_location,
+      session_landing_page_title,
+      session_exit_page_category,
+      session_exit_page_location,
+      session_exit_page_title,
+      session_hostname,
       session_device_type,
       session_country,
       session_language,
+      session_browser_name,
+      event_date,
       step_name,
       step_index,
       case 
@@ -314,46 +552,46 @@ CREATE OR REPLACE TABLE FUNCTION `tom-moretti.nameless_analytics.ec_shopping_sta
         else step_index + 1 
       end as step_index_next_step_real,
       lead(step_index, 1) over (
-        partition by client_id, user_id, session_id, session_device_type, session_country, session_language, session_channel_grouping, original_session_source, session_campaign
-        order by event_date, client_id, user_id, session_id, session_device_type, session_country, session_language, session_channel_grouping, original_session_source, session_campaign, step_name
+        partition by client_id, user_id, user_channel_grouping, user_source, user_tld_source, user_campaign, user_device_type, user_country, user_language, user_type, new_user, returning_user, session_date, session_number, session_id, session_start_timestamp, session_end_timestamp, session_duration_sec, session_channel_grouping, session_source, session_tld_source, session_campaign, cross_domain_session, session_landing_page_category, session_landing_page_location, session_landing_page_title, session_exit_page_category, session_exit_page_location, session_exit_page_title, session_hostname, session_device_type, session_country, session_language, session_browser_name
+        order by event_date, client_id, user_id, user_channel_grouping, user_source, user_tld_source, user_campaign, user_device_type, user_country, user_language, user_type, new_user, returning_user, session_date, session_number, session_id, session_start_timestamp, session_end_timestamp, session_duration_sec, session_channel_grouping, session_source, session_tld_source, session_campaign, cross_domain_session, session_landing_page_category, session_landing_page_location, session_landing_page_title, session_exit_page_category, session_exit_page_location, session_exit_page_title, session_hostname, session_device_type, session_country, session_language, session_browser_name, step_name
       ) as step_index_next_step,
       status,
       lead(client_id, 1) over (
-        partition by client_id, user_id, session_id, session_device_type, session_country, session_language, session_channel_grouping, original_session_source, session_campaign
-        order by event_date, client_id, user_id, session_id, session_device_type, session_country, session_language, session_channel_grouping, original_session_source, session_campaign, step_name
+        partition by client_id, user_id, user_channel_grouping, user_source, user_tld_source, user_campaign, user_device_type, user_country, user_language, user_type, new_user, returning_user, session_date, session_number, session_id, session_start_timestamp, session_end_timestamp, session_duration_sec, session_channel_grouping, session_source, session_tld_source, session_campaign, cross_domain_session, session_landing_page_category, session_landing_page_location, session_landing_page_title, session_exit_page_category, session_exit_page_location, session_exit_page_title, session_hostname, session_device_type, session_country, session_language, session_browser_name
+        order by event_date, client_id, user_id, user_channel_grouping, user_source, user_tld_source, user_campaign, user_device_type, user_country, user_language, user_type, new_user, returning_user, session_date, session_number, session_id, session_start_timestamp, session_end_timestamp, session_duration_sec, session_channel_grouping, session_source, session_tld_source, session_campaign, cross_domain_session, session_landing_page_category, session_landing_page_location, session_landing_page_title, session_exit_page_category, session_exit_page_location, session_exit_page_title, session_hostname, session_device_type, session_country, session_language, session_browser_name, step_name
       ) as client_id_next_step,
       lead(session_id, 1) over (
-        partition by client_id, user_id, session_id, session_device_type, session_country, session_language, session_channel_grouping, original_session_source, session_campaign
-        order by event_date, client_id, user_id, session_id, session_device_type, session_country, session_language, session_channel_grouping, original_session_source, session_campaign, step_name
+        partition by client_id, user_id, user_channel_grouping, user_source, user_tld_source, user_campaign, user_device_type, user_country, user_language, user_type, new_user, returning_user, session_date, session_number, session_id, session_start_timestamp, session_end_timestamp, session_duration_sec, session_channel_grouping, session_source, session_tld_source, session_campaign, cross_domain_session, session_landing_page_category, session_landing_page_location, session_landing_page_title, session_exit_page_category, session_exit_page_location, session_exit_page_title, session_hostname, session_device_type, session_country, session_language, session_browser_name
+        order by event_date, client_id, user_id, user_channel_grouping, user_source, user_tld_source, user_campaign, user_device_type, user_country, user_language, user_type, new_user, returning_user, session_date, session_number, session_id, session_start_timestamp, session_end_timestamp, session_duration_sec, session_channel_grouping, session_source, session_tld_source, session_campaign, cross_domain_session, session_landing_page_category, session_landing_page_location, session_landing_page_title, session_exit_page_category, session_exit_page_location, session_exit_page_title, session_hostname, session_device_type, session_country, session_language, session_browser_name, step_name
       ) as session_id_next_step,
     from union_steps
   )
 
   select 
-      event_date,
-      client_id,
-      user_id,
-      session_id,
-      session_channel_grouping,
-      original_session_source,
-      split(original_session_source, '.')[safe_offset(0)] as session_source,
-      session_campaign,
-      session_device_type,
-      session_country,
-      session_language,
-      step_name,
-      step_index,
-      step_index_next_step_real,
-      step_index_next_step,
-      status,
-      case 
-        when step_name = '6 - Purchase' then null 
-        else case when step_index_next_step_real = step_index_next_step then client_id_next_step else null end 
-      end as client_id_next_step,
-      case 
-        when step_name = '6 - Purchase' then null 
-        else case when step_index_next_step_real = step_index_next_step then session_id_next_step else null end 
-      end as session_id_next_step,
+    event_date,
+    client_id,
+    user_id,
+    session_id,
+    session_channel_grouping,
+    split(session_tld_source, '.')[safe_offset(0)] as session_source,
+    session_tld_source,
+    session_campaign,
+    session_device_type,
+    session_country,
+    session_language,
+    step_name,
+    step_index,
+    step_index_next_step_real,
+    step_index_next_step,
+    status,
+    case 
+      when step_name = '6 - Purchase' then null 
+      else case when step_index_next_step_real = step_index_next_step then client_id_next_step else null end 
+    end as client_id_next_step,
+    case 
+      when step_name = '6 - Purchase' then null 
+      else case when step_index_next_step_real = step_index_next_step then session_id_next_step else null end 
+    end as session_id_next_step,
   from union_steps_def
   where true 
     and event_date between start_date and end_date
