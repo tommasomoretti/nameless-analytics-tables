@@ -1,44 +1,53 @@
 CREATE OR REPLACE TABLE FUNCTION `tom-moretti.nameless_analytics.ec_products`(start_date DATE, end_date DATE) AS (
-  with product_data_raw as ( 
+  with event_data as ( 
     select
       -- USER DATA
-      user_data.user_date,
-      user_data.user_id,
-      user_data.client_id,
-      user_data.user_first_session_timestamp,
-      user_data.user_last_session_timestamp,
-      days_from_first_to_last_visit,
-      days_from_first_visit,
-      days_from_last_visit,
-      user_data.user_channel_grouping,
-      user_data.user_source,
-      user_data.user_campaign,
-      user_data.user_device_type,
-      user_data.user_country,
-      user_data.user_language,
-        
+      user_date,
+      client_id,
+      user_id,
+      user_channel_grouping,
+      user_source,
+      user_tld_source,
+      user_campaign,
+      user_device_type,
+      user_country,
+      user_language,
+      case 
+        when session_number = 1 then 'new_user'
+        when session_number > 1 then 'returning_user'
+      end as user_type,
+      case 
+        when session_number = 1 then client_id
+        else null
+      end as new_user,
+      case 
+        when session_number > 1 then client_id
+        else null
+      end as returning_user,
+  
       -- SESSION DATA
-      user_data.session_date,
-      user_data.session_id, 
-      user_data.session_number,
-      user_data.cross_domain_session,
-      user_data.session_start_timestamp,
-      user_data.session_end_timestamp,
-      user_data.session_duration_sec,
-      user_data.session_channel_grouping,
-      user_data.session_source,
-      user_data.session_campaign,
-      user_data.session_hostname,
-      user_data.session_device_type,
-      user_data.session_country,
-      user_data.session_language,
-      user_data.session_browser_name,
-      user_data.session_landing_page_category,
-      user_data.session_landing_page_location,
-      user_data.session_landing_page_title,
-      user_data.session_exit_page_category,
-      user_data.session_exit_page_location,
-      user_data.session_exit_page_title,
+      session_date,
+      session_number,
+      session_id,
+      session_start_timestamp,
+      session_end_timestamp,
+      session_duration_sec,
+      session_channel_grouping,
+      session_source,
+      session_tld_source,
+      session_campaign,
+      cross_domain_session,  
+      session_landing_page_category,
+      session_landing_page_location,
+      session_landing_page_title,
+      session_exit_page_category,
+      session_exit_page_location,
+      session_exit_page_title,
+      session_hostname,
+      session_device_type,
+      session_country,
+      session_language,
+      session_browser_name,
 
       -- EVENT DATA
       event_date,
@@ -49,10 +58,7 @@ CREATE OR REPLACE TABLE FUNCTION `tom-moretti.nameless_analytics.ec_products`(st
       ecommerce as transaction_data,
       json_extract_array(ecommerce, '$.items') as items_data
       
-    from `tom-moretti.nameless_analytics.users_raw_latest` (start_date, end_date, 'session_level') as user_data
-      left join `tom-moretti.nameless_analytics.events` as event_data 
-        on user_data.client_id = event_data.client_id
-        and user_data.session_id = event_data.session_id
+    from `tom-moretti.nameless_analytics.events` (start_date, end_date, 'session_level')
   ),
 
   product_data as (
@@ -62,11 +68,8 @@ CREATE OR REPLACE TABLE FUNCTION `tom-moretti.nameless_analytics.ec_products`(st
       client_id,
       user_id,
       user_channel_grouping,
-      case
-        when user_source = 'tagassistant.google.com' then user_source
-        when net.reg_domain(user_source) is not null then net.reg_domain(user_source)
-        else user_source
-      end as original_user_source,
+      user_source,
+      user_tld_source,
       user_campaign,
       user_device_type,
       user_country,
@@ -91,12 +94,11 @@ CREATE OR REPLACE TABLE FUNCTION `tom-moretti.nameless_analytics.ec_products`(st
       session_start_timestamp,
       session_end_timestamp,
       session_channel_grouping,
-      case
-        when session_source = 'tagassistant.google.com' then session_source
-        when net.reg_domain(session_source) is not null then net.reg_domain(session_source)
-        else session_source
-      end as original_session_source,
+
+      session_source,
+      session_tld_source,
       session_campaign,
+      cross_domain_session,
       session_landing_page_category,
       session_landing_page_location,
       session_landing_page_title,
@@ -165,7 +167,7 @@ CREATE OR REPLACE TABLE FUNCTION `tom-moretti.nameless_analytics.ec_products`(st
         when event_name = 'purchase' then count(distinct json_value(items, '$.item_name'))
         else null
       end as item_unique_purchases
-    from product_data_raw
+    from event_data
       left join unnest(items_data) as items
     group by all
   ),
@@ -177,8 +179,8 @@ CREATE OR REPLACE TABLE FUNCTION `tom-moretti.nameless_analytics.ec_products`(st
       client_id,
       user_id,
       user_channel_grouping,
-      split(original_user_source, '.')[safe_offset(0)] as user_source,
-      original_user_source,
+      split(user_tld_source, '.')[safe_offset(0)] as user_source,
+      user_tld_source,
       user_campaign,
       user_device_type,
       user_country,
@@ -192,9 +194,10 @@ CREATE OR REPLACE TABLE FUNCTION `tom-moretti.nameless_analytics.ec_products`(st
       session_id,
       session_start_timestamp,
       session_channel_grouping,
-      split(original_session_source, '.')[safe_offset(0)] as session_source,
-      original_session_source,
+      split(session_tld_source, '.')[safe_offset(0)] as session_source,
+      session_tld_source,
       session_campaign,
+      cross_domain_session,
       session_device_type,
       session_country,
       session_browser_name,
@@ -260,7 +263,7 @@ CREATE OR REPLACE TABLE FUNCTION `tom-moretti.nameless_analytics.ec_products`(st
     user_id,
     user_channel_grouping,
     user_source,
-    original_user_source,
+    user_tld_source,
     user_campaign,
     user_device_type,
     user_country,
@@ -275,8 +278,9 @@ CREATE OR REPLACE TABLE FUNCTION `tom-moretti.nameless_analytics.ec_products`(st
     session_start_timestamp,
     session_channel_grouping,
     session_source,
-    original_session_source,
+    session_tld_source,
     session_campaign,
+    cross_domain_session,
     session_device_type,
     session_country,
     session_browser_name,
