@@ -152,7 +152,7 @@ declare dataset_location string default 'EU'; -- Change this
 
 # Tables
 declare main_table_name string default 'events_raw';
-declare dates_table_name string default 'dates';
+declare dates_table_name string default 'calendar_dates';
 declare batch_data_loader_logs_table_name string default 'batch_data_loader_logs';
 
 declare main_dataset_path string default CONCAT('`', project_name, '.', dataset_name, '`');
