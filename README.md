@@ -151,9 +151,9 @@ declare dataset_name string default 'nameless_analytics'; -- Change this
 declare dataset_location string default 'EU'; -- Change this
 
 # Tables
-declare main_table_name string default 'events_raw'; -- Change this
+declare main_table_name string default 'events_raw';
 declare dates_table_name string default 'dates';
-declare batch_data_loader_logs_table_name string default 'data_loader_logs';
+declare batch_data_loader_logs_table_name string default 'batch_data_loader_logs';
 
 declare main_dataset_path string default CONCAT('`', project_name, '.', dataset_name, '`');
 declare main_table_path string default CONCAT('`', project_name, '.', dataset_name, '.', main_table_name,'`');
@@ -181,7 +181,7 @@ declare main_dataset_sql string default format(
 , main_dataset_path, dataset_location);
 
 
-# Event table
+# Main table
 declare main_table_sql string default format(
   """
     create table if not exists %s (
@@ -290,7 +290,7 @@ declare dates_table_sql string default FORMAT(
 , dates_table_path);
 
 
-# Batch data loader logs table
+# Data loader logs table
 declare batch_data_loader_logs_table_sql string default format(
   """
     create table if not exists %s (
