@@ -12,12 +12,12 @@ For an overview of how Nameless Analytics works [start from here](https://github
 
 Table of contents:
 - Tables
-  - [Main table](#main-table)
-  - [Users raw changelog and Users raw latest](#users-raw-changelog-and-users-raw-latest)
-  - [Batch data loader logs](#batch-data-loader-logs)
+  - [Events raw table](#events-raw)
+  - [Users raw changelog table and Users raw latest view](#users-raw-changelog-and-users-raw-latest)
+  - [Batch data loader logs table](#batch-data-loader-logs-table)
   - [Dates table](#dates-table)
 - Table functions
-  - [Users raw latest](#users-raw-latest)
+  - [Events](#events)
   - [Users](#users)
   - [Sessions](#sessions)
   - [Pages](#pages)
@@ -33,7 +33,7 @@ Table of contents:
 
 
 ## Tables
-### Main table
+### Events raw
 This is the schema of the raw data Main table. It's a partitioned table by event_date, clustered by client_id, session_id and event_name.
 
 | Column                     | Type            | Description                                                                                                | 
@@ -53,8 +53,10 @@ This is the schema of the raw data Main table. It's a partitioned table by event
 | datalayer                  | JSON            | Current dataLayer value                                                                                    |
 | consent_data               | ARRAY           | Consent data parameters                                                                                    |
 
-### Users raw changelog and Users raw latest
-The Users raw changelog table and the Users raw latest view are the results of the Google Firestore export.
+### Users raw changelog table
+The Users raw changelog table is the export of the Google Firestore users collection. Learn more about [stream Firestore data to BigQuery](https://extensions.dev/extensions/firebase/firestore-bigquery-export).
+
+The users_raw_latest view is useless and can be safely deleted.
 
 
 ### Batch data loader logs
