@@ -1,5 +1,5 @@
 CREATE OR REPLACE TABLE FUNCTION `tom-moretti.nameless_analytics.ec_shopping_stages_closed_funnel`(start_date DATE, end_date DATE) AS (
-  with event_data as ( 
+with event_data as ( 
     select
       -- USER DATA
       user_date,
@@ -235,7 +235,7 @@ CREATE OR REPLACE TABLE FUNCTION `tom-moretti.nameless_analytics.ec_shopping_sta
       session_browser_name,
       event_date
     from event_data
-    where event_name = 'vieew_cart'
+    where event_name = 'view_cart'
     group by all
   ),
 
