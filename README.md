@@ -270,27 +270,6 @@ declare dates_table_sql string default FORMAT(
 , dates_table_path);
 
 
-# Data loader logs table
-declare batch_data_loader_logs_table_sql string default format(
-  """
-    create table if not exists %s (
-      date DATE NOT NULL OPTIONS (description = 'Date of the batch import'),
-      datetime DATETIME NOT NULL OPTIONS (description = 'Datetime of the batch import'),
-      timestamp INT64 NOT NULL OPTIONS (description = 'Timestamp of the batch import'),
-      job_id STRING NOT NULL OPTIONS (description = 'Data loader script execution job id'),
-      status STRING NOT NULL OPTIONS (description = 'Data loader script execution status'),
-      message STRING NOT NULL OPTIONS (description = 'Data loader script execution result'),
-      execution_time_micros INT64 OPTIONS (description = 'Data loader script execution time'),
-      rows_inserted INT64 OPTIONS (description = 'Number of rows inserted')
-    ) 
-
-    PARTITION BY date
-    CLUSTER BY status
-    OPTIONS (description = 'Nameless Analytics | Data loader table');
-  """
-, batch_data_loader_logs_table_path);
-
-
 # -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 
@@ -298,7 +277,6 @@ declare batch_data_loader_logs_table_sql string default format(
 execute immediate main_dataset_sql;
 execute immediate main_table_sql;
 execute immediate dates_table_sql;
-execute immediate batch_data_loader_logs_table_sql;
 ```
 
 
