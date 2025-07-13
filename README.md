@@ -12,7 +12,6 @@ Table of contents:
 - Tables
   - [Events raw table](#events-raw-table)
   - [Users raw changelog table](#users-raw-changelog-table)
-  - [Batch data loader logs table](#batch-data-loader-logs-table)
   - [Dates table](#dates-table)
 - Table functions
   - [Events](#events)
@@ -34,24 +33,24 @@ Table of contents:
 ### Events raw table
 This is the schema of the raw data main table. It's a partitioned table by event_date, clustered by client_id, session_id and event_name.
 
-| Nome campo                 | Tipo     | Modalità | Descrizione                                                                                                                                                                                                                    |
-|----------------------------|----------|----------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| event_date                 | DATE     | REQUIRED | Date of the request                                                                                                                                                                                                            |
-| event_datetime             | DATETIME | NULLABLE | Datetime of the request                                                                                                                                                                                                        |
-| event_timestamp            | INTEGER  | REQUIRED | Insert timestamp of the event                                                                                                                                                                                                  |
-| processing_event_timestamp | INTEGER  | NULLABLE | Nameless Analytics Server-side Client Tag received event timestamp when hits are sent from a website or a Streaming Protocol request. Script start execution timestamp if hits are imported by Nameless Analytics Data Loader. |
-| event_origin               | STRING   | REQUIRED | "Streaming Protocol" if the hit comes from streaming protocol, "Website" if the hit comes from browser, "Batch" if the hit comes from data_loader script                                                                       |
-| job_id                     | STRING   | NULLABLE | Job id for Streaming Protocol hits or Batch imports                                                                                                                                                                            |
-| content_length             | INTEGER  | NULLABLE | Size of the message body, in bytes                                                                                                                                                                                             |
-| client_id                  | STRING   | REQUIRED | Client ID                                                                                                                                                                                                                      |
-| user_data                  | RECORD   | REPEATED | User data                                                                                                                                                                                                                      |
-| session_id                 | STRING   | REQUIRED | Session ID                                                                                                                                                                                                                     |
-| session_data               | RECORD   | REPEATED | Session data                                                                                                                                                                                                                   |
-| event_id                   | STRING   | REQUIRED | Event ID                                                                                                                                                                                                                       |
-| event_name                 | STRING   | REQUIRED | Event name                                                                                                                                                                                                                     |
-| event_data                 | RECORD   | REPEATED | Event data                                                                                                                                                                                                                     |
-| ecommerce                  | JSON     | NULLABLE | Ecommerce object                                                                                                                                                                                                               |
-| datalayer                  | JSON     | NULLABLE | Current dataLayer value                                                                                                                                                                                                        |
+| Nome campo                 | Tipo     | Modalità | Descrizione                                                                                                                                                                                                                   |
+|----------------------------|----------|----------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| event_date                 | DATE     | REQUIRED | Date of the request                                                                                                                                                                                                           |
+| event_datetime             | DATETIME | NULLABLE | Datetime of the request                                                                                                                                                                                                       |
+| event_timestamp            | INTEGER  | REQUIRED | Insert timestamp of the event                                                                                                                                                                                                 |
+| processing_event_timestamp | INTEGER  | NULLABLE | Nameless Analytics Server-side Client Tag received event timestamp when hits are sent from a website or a Streaming Protocol request. Script start execution timestamp if hits are imported by Nameless Analytics Data Loader |
+| event_origin               | STRING   | REQUIRED | "Streaming Protocol" if the hit comes from streaming protocol, "Website" if the hit comes from browser                                                                                                                        |
+| job_id                     | STRING   | NULLABLE | Job id for Streaming Protocol hits                                                                                                                                                                                            |
+| content_length             | INTEGER  | NULLABLE | Size of the message body, in bytes                                                                                                                                                                                            |
+| client_id                  | STRING   | REQUIRED | Client ID                                                                                                                                                                                                                     |
+| user_data                  | RECORD   | REPEATED | User data                                                                                                                                                                                                                     |
+| session_id                 | STRING   | REQUIRED | Session ID                                                                                                                                                                                                                    |
+| session_data               | RECORD   | REPEATED | Session data                                                                                                                                                                                                                  |
+| event_id                   | STRING   | REQUIRED | Event ID                                                                                                                                                                                                                      |
+| event_name                 | STRING   | REQUIRED | Event name                                                                                                                                                                                                                    |
+| event_data                 | RECORD   | REPEATED | Event data                                                                                                                                                                                                                    |
+| ecommerce                  | JSON     | NULLABLE | Ecommerce object                                                                                                                                                                                                              |
+| datalayer                  | JSON     | NULLABLE | Current dataLayer value                                                                                                                                                                                                       |
 | consent_data               | RECORD   | REPEATED | Consent data                                                                                                   
 
 
@@ -60,22 +59,7 @@ The Users raw changelog table is the export of the Google Firestore users collec
 
 The users_raw_latest view is useless and can be safely deleted.
 
-
-### Batch data loader logs table
-This is the schema of the Batch data loader logs table. It's a partitioned table by date, clustered by status.
-
-| Nome campo            | Tipo     | Modalità | Descrizione                         |
-|-----------------------|----------|----------|-------------------------------------|
-| date                  | DATE     | REQUIRED | Date of the batch import            |
-| datetime              | DATETIME | REQUIRED | Datetime of the batch import        |
-| timestamp             | INTEGER  | REQUIRED | Timestamp of the batch import       |
-| job_id                | STRING   | REQUIRED | Data loader script execution job id |
-| status                | STRING   | REQUIRED | Data loader script execution status |
-| message               | STRING   | REQUIRED | Data loader script execution result |
-| execution_time_micros | INTEGER  | NULLABLE | Data loader script execution time   |
-| rows_inserted         | INTEGER  | NULLABLE | Number of rows inserted             |
  
-
 ### Dates table
 This is the schema of the Dates table. It's a partitioned table by date, clustered by month_name and day_name.
 
@@ -151,12 +135,10 @@ declare dataset_location string default 'EU'; -- Change this
 # Tables
 declare main_table_name string default 'events_raw';
 declare dates_table_name string default 'calendar_dates';
-declare batch_data_loader_logs_table_name string default 'batch_data_loader_logs';
 
 declare main_dataset_path string default CONCAT('`', project_name, '.', dataset_name, '`');
 declare main_table_path string default CONCAT('`', project_name, '.', dataset_name, '.', main_table_name,'`');
 declare dates_table_path string default CONCAT('`', project_name, '.', dataset_name, '.', dates_table_name,'`');
-declare batch_data_loader_logs_table_path string default CONCAT('`', project_name, '.', dataset_name, '.', batch_data_loader_logs_table_name,'`');
 
 
 # -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -186,9 +168,9 @@ declare main_table_sql string default format(
       event_date DATE NOT NULL OPTIONS (description = 'Date of the request'),
       event_datetime DATETIME OPTIONS (description = 'Datetime of the request'),
       event_timestamp INT64 NOT NULL OPTIONS (description = 'Insert timestamp of the event'),
-      processing_event_timestamp INT64 OPTIONS (description = ' Nameless Analytics Server-side Client Tag received event timestamp when hits are sent from a website or a Streaming Protocol request. Script start execution timestamp if hits are imported by Nameless Analytics Data Loader.'),
-      event_origin STRING NOT NULL OPTIONS (description = '"Streaming Protocol" if the hit comes from streaming protocol, "Website" if the hit comes from browser, "Batch" if the hit comes from data_loader script'),
-      job_id STRING OPTIONS (description = 'Job id for Streaming Protocol hits or Batch imports'),
+      processing_event_timestamp INT64 OPTIONS (description = ' Nameless Analytics Server-side Client Tag received event timestamp when hits are sent from a website or a Streaming Protocol request. Script start execution timestamp if hits are imported by Nameless Analytics Data Loader'),
+      event_origin STRING NOT NULL OPTIONS (description = '"Streaming Protocol" if the hit comes from streaming protocol, "Website" if the hit comes from browser'),
+      job_id STRING OPTIONS (description = 'Job id for Streaming Protocol'),
       content_length INT64 OPTIONS (description = 'Size of the message body, in bytes'),
       
       client_id STRING NOT NULL OPTIONS (description = 'Client ID'),
