@@ -130,7 +130,7 @@ To create the tables use this DML statement.
 
 declare project_name string default 'tom-moretti';  -- Change this
 declare dataset_name string default 'nameless_analytics'; -- Change this
-declare dataset_location string default 'EU'; -- Change this
+declare dataset_location string default 'eu'; -- Change this
 
 # Tables
 declare main_table_name string default 'events_raw';
@@ -140,20 +140,30 @@ declare main_dataset_path string default CONCAT('`', project_name, '.', dataset_
 declare main_table_path string default CONCAT('`', project_name, '.', dataset_name, '.', main_table_name,'`');
 declare dates_table_path string default CONCAT('`', project_name, '.', dataset_name, '.', dates_table_name,'`');
 
-
 # -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
+# Enable BigQuery advanced runtime (for more info https://cloud.google.com/bigquery/docs/advanced-runtime)
+declare enable_bigquery_advanced_runtime string default format(
+  """
+    ALTER PROJECT `%s`
+    SET OPTIONS (
+      `region-%s.query_runtime` = 'advanced' # default null
+    );
+  """
+, project_name, dataset_location);
 
-# Main dataset
+
+
+# Main dataset (for more info https://cloud.google.com/bigquery/docs/datasets#sql)
 declare main_dataset_sql string default format(
   """
     create schema if not exists %s
     options (
-      -- default_kms_key_name = 'KMS_KEY_NAME',
-      -- default_partition_expiration_days = PARTITION_EXPIRATION,
-      -- default_table_expiration_days = TABLE_EXPIRATION,
-      -- max_time_travel_hours = HOURS, // default 168 hours => 7 days 
-      -- storage_billing_model = BILLING_MODEL // Phytical or logical (default)  
+      # default_kms_key_name = 'KMS_KEY_NAME',
+      # default_partition_expiration_days = PARTITION_EXPIRATION,
+      # default_table_expiration_days = TABLE_EXPIRATION,
+      # max_time_travel_hours = HOURS, # default 168 hours => 7 days 
+      # storage_billing_model = BILLING_MODEL # Phytical or logical (default)  
       description = 'Nameless Analytics',
       location = '%s'
     );
@@ -168,11 +178,9 @@ declare main_table_sql string default format(
       event_date DATE NOT NULL OPTIONS (description = 'Date of the request'),
       event_datetime DATETIME OPTIONS (description = 'Datetime of the request'),
       event_timestamp INT64 NOT NULL OPTIONS (description = 'Insert timestamp of the event'),
-      processing_event_timestamp INT64 OPTIONS (description = ' Nameless Analytics Server-side Client Tag received event timestamp when hits are sent from a website or a Streaming Protocol request. Script start execution timestamp if hits are imported by Nameless Analytics Data Loader'),
+      processing_event_timestamp INT64 OPTIONS (description = ' Nameless Analytics Server-side Client Tag received event timestamp when hits are sent from a website or a Streaming Protocol request. Script start execution timestamp if hits are imported by Nameless Analytics Data Loader.'),
       event_origin STRING NOT NULL OPTIONS (description = '"Streaming Protocol" if the hit comes from streaming protocol, "Website" if the hit comes from browser'),
-      job_id STRING OPTIONS (description = 'Job id for Streaming Protocol'),
       content_length INT64 OPTIONS (description = 'Size of the message body, in bytes'),
-      
       client_id STRING NOT NULL OPTIONS (description = 'Client ID'),
       user_data ARRAY<
         STRUCT<
@@ -185,7 +193,6 @@ declare main_table_sql string default format(
           > OPTIONS (description = 'User data parameter value name')
         >
       > OPTIONS (description = 'User data'),
-
       session_id STRING NOT NULL OPTIONS (description = 'Session ID'),
       session_data ARRAY<
         STRUCT<
@@ -197,11 +204,9 @@ declare main_table_sql string default format(
             json JSON OPTIONS (description = 'Session data parameter JSON value')
           > OPTIONS (description = 'Session data parameter value name')
         >
-      > OPTIONS (description = 'Session data'),
-      
+      > OPTIONS (description = 'Session data'),   
       event_id STRING NOT NULL OPTIONS (description = 'Event ID'),
       event_name STRING NOT NULL OPTIONS (description = 'Event name'),
-
       event_data ARRAY<
         STRUCT<
           name STRING OPTIONS (description = 'Event data parameter name'),
@@ -215,7 +220,6 @@ declare main_table_sql string default format(
       > OPTIONS (description = 'Event data'),
       ecommerce JSON OPTIONS (description = 'Ecommerce object'),
       datalayer JSON OPTIONS (description = 'Current dataLayer value'),
-
       consent_data ARRAY<
         STRUCT<
           name STRING OPTIONS (description = 'Consent data parameter name'),
@@ -257,13 +261,13 @@ declare dates_table_sql string default FORMAT(
         EXTRACT(YEAR FROM date) AS year,
         EXTRACT(QUARTER FROM date) AS quarter,
         EXTRACT(MONTH FROM date) AS month_number,
-        FORMAT_DATE('%%B', date) AS month_name, -- Nome completo del mese
-        EXTRACT(WEEK(SUNDAY) FROM date) AS week_number_sunday, -- Numero settimana (domenica inizio)
-        EXTRACT(WEEK(MONDAY) FROM date) AS week_number_monday, -- Numero settimana (lunedì inizio)
-        EXTRACT(DAY FROM date) AS day_number, -- Giorno del mese
-        FORMAT_DATE('%%A', date) AS day_name, -- Nome completo del giorno
-        EXTRACT(DAYOFWEEK FROM date) AS day_of_week_number, -- Numero giorno della settimana (1 = domenica)
-        IF(EXTRACT(DAYOFWEEK FROM date) IN (1, 7), TRUE, FALSE) AS is_weekend -- Sabato o domenica
+        FORMAT_DATE('%%B', date) AS month_name,
+        EXTRACT(WEEK(SUNDAY) FROM date) AS week_number_sunday,
+        EXTRACT(WEEK(MONDAY) FROM date) AS week_number_monday,
+        EXTRACT(DAY FROM date) AS day_number,
+        FORMAT_DATE('%%A', date) AS day_name,
+        EXTRACT(DAYOFWEEK FROM date) AS day_of_week_number, 
+        IF(EXTRACT(DAYOFWEEK FROM date) IN (1, 7), TRUE, FALSE) AS is_weekend
       FROM UNNEST(GENERATE_DATE_ARRAY('1970-01-01', '2050-12-31', INTERVAL 1 DAY)) AS date
     );
   """
@@ -274,6 +278,7 @@ declare dates_table_sql string default FORMAT(
 
 
 # Create tables 
+execute immediate enable_bigquery_advanced_runtime;
 execute immediate main_dataset_sql;
 execute immediate main_table_sql;
 execute immediate dates_table_sql;
