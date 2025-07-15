@@ -1,5 +1,5 @@
 CREATE OR REPLACE TABLE FUNCTION `tom-moretti.nameless_analytics.events`(start_date DATE, end_date DATE, user_session_scope_param STRING) AS (
-  with users_raw_changelog as (
+with users_raw_changelog as (
     select
       document_name,
       document_id,
