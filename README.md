@@ -3,8 +3,8 @@
 
 ---
 
-# Tables
-The Nameless Analytics tables is a set of tables in BigQuery where users, sessions and events data are stored.
+# Reporting tables
+The Nameless Analytics reportin tables is a set of tables in BigQuery where users, sessions and events data are stored.
 
 For an overview of how Nameless Analytics works [start from here](https://github.com/tommasomoretti/nameless-analytics/).
 
